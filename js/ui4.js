@@ -27,7 +27,7 @@ function cliDetalhe(){
   const outras=k=>DB.unidades.filter(u=>u.id_cliente===k.id&&u.id!==x.id);
   return `<section class="panel cli-detail open">
     <div class="row"><button class="iconbtn only-mobile" data-act="cliundfechar" aria-label="Voltar para a lista">${IC.back}</button><div><div class="muted small">${esc(nivel1Nome(x))}${nivel2Nome(x)?" · "+esc(nivel2Nome(x)):""}</div><h2 class="h2" style="font-size:1.5rem">${esc(x.unidade)}</h2></div><span class="spacer"></span>${pill(ETAPA[x.sub_etapa].n).replace(/s-\w+"/,'s-neutral"')}</div>
-    <div class="cli-card ${c?"":"vazio"}">${c?`${avatar(tituloCase(c.nome))}<div style="min-width:0"><b>${esc(tituloCase(c.nome))}</b><div class="small muted tnum">${esc(fmtTel(c.telefone))}</div><div class="small muted" style="overflow-wrap:anywhere">${esc(c.email)}</div></div><span class="spacer"></span><button class="btn sm ghost" data-act="clidesv">Remover vínculo</button>`
+    <div class="cli-card ${c?"":"vazio"}">${c?`<div style="min-width:0"><b>${esc(tituloCase(c.nome))}</b><div class="small muted tnum">${esc(fmtTel(c.telefone))}</div><div class="small muted" style="overflow-wrap:anywhere">${esc(c.email)}</div></div><span class="spacer"></span><button class="btn sm ghost" data-act="clidesv">Remover vínculo</button>`
       :`<span class="muted">Nenhum cliente vinculado a esta unidade.</span>`}</div>
     <div class="field"><label for="cliQ">${c?"Trocar por outro cliente":"Vincular cliente"}</label>${buscaBox("cliQ",C.q,"Digite nome, telefone ou e-mail").replace('class="search"','class="search in"')}</div>
     ${q.length>=2?(res.length?`<ul class="cli-res">${res.map(k=>{const o=outras(k); return `<li><div style="min-width:0"><b>${esc(tituloCase(k.nome))}</b><div class="small muted tnum">${esc(fmtTel(k.telefone))} · ${esc(k.email)}</div>${o.length?`<div class="small" style="color:var(--primary-d)">Já vinculado a ${esc(o.map(u=>nivel1Nome(u)+" · "+u.unidade).join(", "))}</div>`:""}</div><button class="btn sm primary" data-act="clivinc2" data-c="${k.id}">Vincular</button></li>`;}).join("")}</ul>`
@@ -57,6 +57,15 @@ function cliCadastro(){
 
 /* ================= TELA: PERFIL ================= */
 const PERM_DESC={admin:"Acesso total: todas as obras, todas as ações e as configurações.",obra:"Libera testes, corrige pendências, finaliza unidades e cadastra locais e horários.",instalacoes:"Aprova e reprova os testes de esgoto, água fria, dreno, gás e elétrico.",excelencia:"Faz as vistorias Qualidade, Prévia e do Cliente e configura os horários.",rc:"Agenda as vistorias com os clientes e cuida do cadastro de clientes.",financeiro:"Acompanha a fase de Entrega e o status financeiro das unidades.",arquitetura:"Aprova e reprova a vistoria de Arquitetura das áreas comuns.",gerente:"Vê os indicadores gerais das suas obras na tela inicial."};
+function prefsPerfil(u){
+  const P=(S.perfil||{}).prefs||{}, tela=telaInicialObra(), ops=TELAS_INICIAIS.filter(([k])=>k!=="agenda"||can(u,"admin","obra","excelencia","rc"));
+  return `<section class="panel prefs"><h2 class="h3">Preferências</h2>
+    <div class="pref-row"><div><b>Foto</b><span class="small muted">Aparece no menu e no histórico das unidades.</span></div><div class="row" style="gap:8px"><label class="btn sm ghost">${IC.camera}${u.foto?"Trocar foto":"Colocar foto"}<input type="file" id="foto-eu" accept="image/*" hidden></label>${u.foto?`<button class="btn sm ghost" data-act="fotodel">Remover</button>`:""}</div></div>
+    <div class="pref-row"><div><b>Tela ao entrar na obra</b><span class="small muted">Qual tela abre primeiro quando você escolhe uma obra.</span></div><div class="seg">${ops.map(([k,l])=>`<button class="${tela===k?"on":""}" data-act="telaini" data-v="${k}">${l}</button>`).join("")}</div></div>
+    <div class="pref-row"><div><b>Tema</b><span class="small muted">Fica salvo para as próximas vezes.</span></div><div class="seg"><button class="${isDark()?"":"on"}" data-act="tema" data-v="light">Claro</button><button class="${isDark()?"on":""}" data-act="tema" data-v="dark">Escuro</button></div></div>
+    ${MODO_DEMO?"":`<div class="pref-row"><div><b>Senha</b><span class="small muted">Troque quando quiser.</span></div><div class="row" style="gap:8px"><button class="btn sm ghost" data-act="senhamodal">Alterar senha</button><button class="btn sm ghost" data-act="sair">${IC.logout}Sair do app</button></div></div>`}
+  </section>`;
+}
 function telaPerfil(){
   const u=ME(), agora=new Date();
   const T=[...DB.tarefas.filter(t=>t.autor===u.login).map(t=>({...t,ac:0})),...DB.tarefas_ac.filter(t=>t.autor===u.login).map(t=>({...t,ac:1}))].sort((a,b)=>b.data.localeCompare(a.data));
@@ -68,8 +77,9 @@ function telaPerfil(){
   const desc=t=>{ if(t.ac){const a=DB.areas.find(z=>z.id===t.id_local); return `${a?a.descricao:"Área comum"}`;} const x=DB.unidades.find(z=>z.id===t.id_unidade); return x?`${nivel1Nome(x)} · ${x.unidade}`:""; };
   const colNome=c=>({"":"Finalização",agendamento:"Agendamento",rep_vistoria_at:"Vistoria Qualidade",rep_vistoria_previa:"Vistoria Prévia",rep_vistoria_cliente:"Vistoria Cliente",rep_vistoria_qualidade:"Vistoria Qualidade",rep_vistoria_arq:"Vistoria Arquitetura",rep_vistoria_sindico:"Vistoria Síndico"}[c]||(TESTES.find(x=>x.col===c)||{}).nome||c);
   return topbar("Meu perfil")+`<main class="screen perfil">
-    <section class="panel perfil-head">${avatar(u.nome).replace('class="avatar"','class="avatar big"')}<div><h2 class="h2" style="font-size:1.5rem">${esc(u.nome)}</h2><div class="muted">${esc(u.email||u.login+"@rottasconstrutora.com.br")}</div>
+    <section class="panel perfil-head">${u.login===REAL_USER?`<label class="av-edit" title="Trocar foto">${avatarU(u,"big")}<span class="av-cam">${IC.camera}</span><input type="file" id="foto-eu" accept="image/*" hidden></label>`:avatarU(u,"big")}<div><h2 class="h2" style="font-size:1.5rem">${esc(u.nome)}</h2><div class="muted">${esc(u.email||u.login+"@rottasconstrutora.com.br")}</div>
       <div class="row" style="margin-top:10px;gap:6px">${u.perms.map(p=>`<span class="pill s-neutral">${esc(PERM_NOME[p]||p)}</span>`).join("")}</div></div>${acoesPerfil(u)}</section>
+    ${u.login===REAL_USER?prefsPerfil(u):""}
     <div class="kpis">${[["Tarefas feitas",T.length],["Últimos 30 dias",dias(30)],["Últimos 7 dias",dias(7)],["Obras com atividade",new Set(T.map(t=>t.id_obra)).size]].map(([l,v])=>`<div class="panel kpi-tile"><span class="eyebrow">${l}</span><b class="tnum">${v}</b></div>`).join("")}</div>
     <div class="perfil-grid">
       <section class="panel"><h2 class="h3">O que você pode fazer</h2><ul class="perm-list">${u.perms.map(p=>`<li><b>${esc(PERM_NOME[p]||p)}</b><span class="muted small">${esc(PERM_DESC[p]||"")}</span></li>`).join("")}</ul></section>

@@ -4,6 +4,10 @@
    o admin aprova na tela Usuários escolhendo funções e obras.
    ===================================================================== */
 
+/* ---------- tela de abertura (carregando) ---------- */
+function telaBoot(msg){ return `<div class="boot"><img class="boot-ic" src="img/icone.png" alt="Gestor de Entrega"><span class="spin" aria-hidden="true"></span><span class="boot-msg" id="boot-msg">${esc(msg||"Abrindo o app...")}</span></div>`; }
+function passo(msg){ if(S.auth.tela!=="carregando") return; S.auth.passo=msg; const el=document.getElementById("boot-msg"); if(el) el.textContent=msg; else render(); }
+
 /* ---------- telas de entrada ---------- */
 function authShell(corpo){
   return `<div class="auth"><div class="home-top"><div class="wrap"><b>Controle das Unidades | Excelência Operacional</b><b>${VERSAO}</b></div></div>
@@ -18,7 +22,7 @@ const btnEnviar=(txt)=>`<button class="btn primary auth-go" type="submit" ${S.au
 
 function telaAuth(){
   const A=S.auth, P=S.perfil||{};
-  if(A.tela==="carregando") return authShell(`<div class="auth-wait"><span class="spin" aria-hidden="true"></span><span>Carregando...</span></div>`);
+  if(A.tela==="carregando") return telaBoot(A.passo);
   if(A.tela==="entrar") return authShell(`<h1>Entrar</h1>${authMsg()}
     <form data-form="login" class="auth-form" novalidate>${campo("a-email","E-mail","email",`autocomplete="username" value="${esc(A.email||"")}" required`)}${campo("a-senha","Senha","password",'autocomplete="current-password" required')}
     ${btnEnviar("Entrar")}</form>
@@ -57,9 +61,10 @@ function traduzAuth(e){
 }
 
 async function posLogin(){
-  S.auth={tela:"carregando"}; render();
+  S.auth={tela:"carregando",passo:"Verificando o login..."}; render();
   const { data:{ user } } = await sb.auth.getUser();
   if(!user){ S.auth={tela:"entrar"}; render(); return; }
+  passo("Buscando o seu perfil e as suas permissões...");
   let p=null;
   for(let i=0;i<4&&!p;i++){ const { data } = await sb.from("perfis").select("*").eq("id",user.id).maybeSingle(); p=data; if(!p) await esperar(700); }
   if(!p){ S.auth={tela:"erro",erro:"Não encontramos o seu perfil. Fale com o administrador (o script 01_estrutura.sql foi rodado?)."}; render(); return; }
@@ -68,7 +73,8 @@ async function posLogin(){
   if(p.status==="bloqueado"){ S.auth={tela:"bloqueado"}; render(); return; }
   if(p.trocar_senha){ S.auth={tela:"trocarsenha"}; render(); return; }
   REAL_USER=p.login; S.user=p.login;
-  try{ await API.carregar(); }
+  aplicarPrefs(p.prefs);
+  try{ await API.carregar(true); }
   catch(e){ S.auth={tela:"erro",erro:"Não foi possível carregar os dados: "+msgErro(e)}; render(); return; }
   S.auth={tela:null}; S.screen="home"; S.obraId=null; resetFiltros(); render();
   if((p.funcoes||[]).includes("admin")){ API.carregarUsuarios().then(()=>{ render(); const n=API.usrPendentes(); if(n) toast("Info",`${n} pedido(s) aguardando você`,"Abra Usuários para aprovar."); }).catch(()=>{}); }
@@ -79,8 +85,7 @@ async function sair(){ S.saindo=true; try{ await sb.auth.signOut(); }catch(_){} 
 /* ---------- pedaços usados nas telas do app ---------- */
 function topoAcoes(){
   if(MODO_DEMO) return `<span class="hpill">Demonstração</span>`;
-  const n=API.usrPendentes(), adm=can(userByLogin(REAL_USER)||{perms:[]},"admin");
-  return `${adm?`<button class="hbtn" data-act="usuarios">Usuários${n?`<span class="hbadge">${n}</span>`:""}</button>`:""}<button class="hbtn" data-act="sair">Sair</button>`;
+  return "";
 }
 function itemUsuarios(u){
   if(MODO_DEMO||!can(userByLogin(REAL_USER)||{perms:[]},"admin")) return "";
@@ -89,7 +94,7 @@ function itemUsuarios(u){
 }
 function acoesPerfil(u){
   if(MODO_DEMO||u.login!==REAL_USER) return "";
-  return `<span class="spacer"></span><div class="row" style="gap:8px"><button class="btn ghost sm" data-act="senhamodal">Alterar senha</button><button class="btn ghost sm" data-act="sair">Sair</button></div>`;
+  return "";
 }
 function extrasAuth(){
   let h="";
@@ -124,7 +129,7 @@ function telaUsuarios(){
     <div class="seg tabs" role="tablist">${[["pendentes","Pendentes"],["ativos","Ativos"],["bloqueados","Bloqueados"]].map(([k,l])=>`<button class="${U.aba===k?"on":""}" role="tab" aria-selected="${U.aba===k}" data-act="usraba" data-v="${k}">${l} <span class="tnum">(${grupos[k].length})</span></button>`).join("")}</div>
     ${pedidosSenha&&U.aba!=="ativos"?`<button class="auth-msg warn" data-act="usraba" data-v="ativos" style="text-align:left;border:0;cursor:pointer">${pedidosSenha} pessoa(s) ativas pediram nova senha. Ver em Ativos.</button>`:""}
     <label class="search in">${IC.search}<input id="usr-busca" data-ubind="busca" value="${esc(U.busca)}" placeholder="Buscar nome ou e-mail" autocomplete="off"></label>
-    <div class="cli-units" id="usr-list" data-keep-scroll>${lista.length?lista.map(p=>`<button class="cli-row ${U.sel===p.id?"on":""}" data-act="usrsel" data-uid="${p.id}">${avatar(p.nome)}<span class="usr-txt"><b>${esc(p.nome)}</b><span class="muted small">${esc(p.email)}</span></span><span class="spacer"></span>
+    <div class="cli-units" id="usr-list" data-keep-scroll>${lista.length?lista.map(p=>`<button class="cli-row ${U.sel===p.id?"on":""}" data-act="usrsel" data-uid="${p.id}">${avatar(p.nome,p.foto)}<span class="usr-txt"><b>${esc(p.nome)}</b><span class="muted small">${esc(p.email)}</span></span><span class="spacer"></span>
       ${p.pedido_senha?`<span class="pill s-warn">Nova senha</span>`:""}${U.aba==="pendentes"?`<span class="muted small tnum">${fmtData(new Date(p.criado_em))}</span>`:""}</button>`).join("")
       :`<div class="empty"><b>${U.aba==="pendentes"?"Nenhum pedido aguardando":"Ninguém por aqui"}</b><span>${U.aba==="pendentes"?"Quando alguém pedir acesso, aparece nesta lista.":"Mude a aba ou a busca."}</span></div>`}</div></section>`;
   return head+`<main class="screen"><div class="split cli-split">${left}${usrDetalhe()}</div></main>`;
@@ -138,7 +143,7 @@ function usrDetalhe(){
   const adminMarcado=F.funcoes.includes("admin");
   return `<section class="panel cli-detail open usr-detail">
     <div class="row"><span class="pill s-${cls}">${stl}</span>${p.pedido_senha?`<span class="pill s-warn">Pediu nova senha em ${fmtDTL(new Date(p.pedido_senha))}</span>`:""}<span class="spacer"></span><button class="iconbtn" data-act="usrfechar" aria-label="Fechar">${IC.close}</button></div>
-    <div class="perfil-head">${avatar(p.nome).replace('class="avatar"','class="avatar big"')}<div><h2 class="h2" style="font-size:1.35rem;margin:0">${esc(p.nome)}</h2><div class="muted">${esc(p.email)}</div>
+    <div class="perfil-head">${avatar(p.nome,p.foto,"big")}<div><h2 class="h2" style="font-size:1.35rem;margin:0">${esc(p.nome)}</h2><div class="muted">${esc(p.email)}</div>
       <div class="small muted">Login: <b>${esc(p.login)}</b> · pediu acesso em ${fmtDTL(new Date(p.criado_em))}${p.aprovado_em?` · aprovado em ${fmtData(new Date(p.aprovado_em))}${p.aprovado_por?` por ${esc(p.aprovado_por)}`:""}`:""}</div></div></div>
     <div><div class="row"><h3 class="h3" style="margin:0">Funções</h3><span class="spacer"></span>${sug?`<span class="small muted">No app antigo: <b>${esc(sug.map(f=>PERM_NOME[f]||f).join(", "))}</b></span><button class="btn sm ghost" data-act="usrsug">Usar</button>`:""}</div>
       <div class="usr-grid">${funcoes}</div></div>
@@ -167,7 +172,7 @@ document.addEventListener("click",async e=>{
     senhafechar(){ S.senhaModal=null; },
     async verass(){ await API.verAssinatura(+el.dataset.id); },
     async anexo(){ await API.abrirAnexo(el.dataset.path); },
-    async usuarios(){ if(S.screen!=="usuarios") U.voltar=S.obraId?S.screen:"home"; S.screen="usuarios"; S.nav=false; S.navObras=false; S.popup=null; U.sel=null; render();
+    async usuarios(){ S.adminPanel=false; if(S.screen!=="usuarios") U.voltar=S.obraId?S.screen:"home"; S.screen="usuarios"; S.nav=false; S.navObras=false; S.popup=null; U.sel=null; render();
       try{ await API.carregarUsuarios(); }catch(err){ toast("Erro","Não foi possível carregar os usuários",msgErro(err)); } },
     usrvoltar(){ S.screen=U.voltar&&S.obraId?U.voltar:"home"; U.sel=null; },
     async usrrecarregar(){ try{ await API.carregarUsuarios(); toast("Sucesso","Lista atualizada"); }catch(err){ toast("Erro","Não foi possível atualizar",msgErro(err)); } },

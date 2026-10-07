@@ -31,16 +31,18 @@ const IC={
   chevL:sv('<path d="M15 18l-6-6 6-6"/>'), chevR:sv('<path d="M9 18l6-6-6-6"/>'), chevD:sv('<path d="M6 9l6 6 6-6"/>'), chevU:sv('<path d="M6 15l6-6 6 6"/>'),
   dots:sv('<circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>',1),
   clip:sv('<path d="M20 11.5l-8.2 8.2a5 5 0 01-7-7L13 4.4a3.3 3.3 0 014.7 4.7l-8.2 8.2a1.7 1.7 0 01-2.4-2.4l7.5-7.5"/>'),
+  logout:sv('<path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/>'),
+  camera:sv('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.1";
+const VERSAO="v2.1.2";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
 let REAL_USER="";
 const S={conf:null,homeInd:null,adminPanel:false,simSel:"",menuAcoes:false,user:"",auth:{tela:null},usr:{aba:"pendentes",sel:null,busca:"",form:null,senha:""},usrData:null,carregando:"",senhaModal:null,obraId:null,screen:"home",nav:false,navObras:false,drawer:false,busca:"",popup:null,ag:null,lote:{on:false,q:[]},
   fil:null,acBusca:"",ind:{visao:"Visão Unidades",etapa:"lib",fil:null,ini:"",fim:"",fechado:{}},agd:null,loc:{localId:null,n2:null,modal:null,cfgAberta:false},
-  cli:{aba:"vinc",ubusca:"",filtro:"todas",und:null,q:"",novo:false,nform:{nome:"",telefone:"",email:""},busca:"",edit:null,form:{nome:"",telefone:"",email:""},del:false},hor:null,toasts:[],confirmReset:false,dark:null};
+  cli:{aba:"vinc",ubusca:"",filtro:"todas",und:null,q:"",novo:false,nform:{nome:"",telefone:"",email:""},busca:"",edit:null,form:{nome:"",telefone:"",email:""},del:false},hor:null,toasts:[],confirmReset:false,dark:false,locAba:"und"};
 const ME=()=>userByLogin(S.user);
 const OBRA=()=>obraById(S.obraId);
 function filtrosPadrao(u){ return {extras:can(u,"admin","obra","instalacoes"),f1:can(u,"admin","obra","instalacoes"),f2:can(u,"admin","obra","excelencia","rc"),f3:can(u,"admin","rc","financeiro"),blocos:[]}; }
@@ -58,7 +60,12 @@ function topbar(titulo,right=""){
 function filtroBtn(n){ return `<button class="iconbtn" data-act="drawer" aria-label="Filtros">${IC.filter}${n?`<span class="badge">${n}</span>`:""}</button>`; }
 function buscaBox(id,val,ph){ return `<label class="search">${IC.search}<input id="${id}" data-bind="${id}" value="${esc(val)}" placeholder="${esc(ph)}" autocomplete="off"></label>`; }
 function pill(v,extra=""){ if(blank(v)) return ""; return `<span class="pill s-${stClass(v)||"neutral"} ${extra}">${esc(v)}</span>`; }
-function avatar(nome){ const p=String(nome||"?").split(" "); return `<span class="avatar">${esc((p[0][0]||"")+(p.length>1?p[p.length-1][0]:""))}</span>`; }
+const AV_CORES=["#E8590C","#1971C2","#2B8A3E","#9C36B5","#C2255C","#0C8599","#5F3DC4","#B35C00","#3B5BDB","#5C940D","#A61E4D","#087F5B"];
+function corAvatar(nome){ let h=0; for(const ch of String(nome||"")) h=(h*31+ch.charCodeAt(0))>>>0; return AV_CORES[h%AV_CORES.length]; }
+function avatar(nome,foto,cls=""){ const p=String(nome||"?").trim().split(/\s+/);
+  if(foto) return `<span class="avatar ${cls}"><img src="${esc(foto)}" alt=""></span>`;
+  return `<span class="avatar ${cls}" style="background:${corAvatar(nome)}">${esc(((p[0]||"")[0]||"")+(p.length>1?p[p.length-1][0]:""))}</span>`; }
+const avatarU=(u,cls="")=>avatar(u&&u.nome,u&&u.foto,cls);
 function saudacao(){ const h=new Date().getHours(); return h<12?"Bom dia":h<18?"Boa tarde":"Boa noite"; }
 const nomeCurto=n=>{const p=String(n).split(" "); return p.length<=2?n:p[0]+" "+p[p.length-1];};
 
@@ -103,7 +110,7 @@ function desenharFotos(){
 function menuLateral(){
   if(!S.nav) return "";
   const u=ME(), it=(id,ic,txt,ok=true)=>ok?`<button class="sb-item ${S.screen===id?"on":""}" data-act="ir" data-to="${id}">${io(id)}${txt}</button>`:"";
-  const cfg=[it("locais","building","Locais",can(u,"admin","obra")),it("clientes","users","Clientes",can(u,"admin","rc")),it("horarios","clock","Horários",can(u,"admin","obra","excelencia")),itemUsuarios(u)].join("");
+  const cfg=[it("locais","building","Locais",can(u,"admin")),it("clientes","users","Clientes",can(u,"admin")),it("horarios","clock","Horários",can(u,"admin","obra","excelencia"))].join("");
   const obrasAcesso=DB.obras.filter(o=>can(u,"admin")||(", "+o.usuarios+", ").includes(", "+u.login+", "));
   return `<div class="scrim" data-act="navclose"></div><aside class="sidebar" aria-label="Menu">
     <div class="sb-head"><button class="logo-btn" data-act="home" aria-label="Voltar para as obras"><img src="${isDark()?LOGOS.branca:LOGOS.preta}" alt="Gestor de Entrega"></button><button data-act="ir" data-to="versoes">${VERSAO}</button></div>
@@ -114,8 +121,9 @@ function menuLateral(){
     </nav>
     <div class="sb-foot">
       <div class="seg temaseg" role="group" aria-label="Tema"><button class="${isDark()?"":"on"}" data-act="tema" data-v="light">${io("sun")}Light</button><button class="${isDark()?"on":""}" data-act="tema" data-v="dark">${io("moon")}Dark</button></div>
-      <button class="btn dark" data-act="sync">${io("sync")}Sincronizar</button>${MODO_DEMO?"":`<button class="btn ghost sm" data-act="sair">Sair</button>`}
-      <button class="sb-user" data-act="ir" data-to="perfil" aria-label="Abrir meu perfil">${avatar(u.nome)}<div><b>${esc(nomeCurto(u.nome))}</b><div class="small muted">${esc(u.login)}</div></div></button>
+      <button class="btn dark" data-act="sync">${io("sync")}Sincronizar</button>
+      <div class="sb-userrow"><button class="sb-user" data-act="ir" data-to="perfil" aria-label="Abrir meu perfil">${avatarU(u)}<div class="sb-user-t"><b>${esc(nomeCurto(u.nome))}</b><div class="small muted">${esc(u.login)}</div></div></button>
+        ${MODO_DEMO?"":`<button class="iconbtn sb-sair" data-act="sair" aria-label="Sair do app" title="Sair">${IC.logout}</button>`}</div>
     </div>
     <button class="sb-obra" data-act="navobras">Obra: ${esc(OBRA().nome)} ${S.navObras?"▴":"▾"}</button>
   </aside>
@@ -123,11 +131,14 @@ function menuLateral(){
 }
 function painelAdmin(){
   if(!S.adminPanel) return "";
-  return `<div class="scrim" data-act="adminpanel"></div><aside class="adminpanel" aria-label="Simular acesso">
-    <h2>Simular Acesso</h2>
+  const nU=MODO_DEMO?0:API.usrPendentes();
+  return `<div class="scrim" data-act="adminpanel"></div><aside class="adminpanel" aria-label="Configurações Admin">
+    <h2>Configurações Admin</h2>
+    <h3 class="ap-sub">Simular acesso</h3>
     <select id="sim-user" class="inp" data-act-change="simsel" aria-label="Usuário"><option value="">Selecione o usuário</option>${DB.usuarios.map(x=>`<option value="${x.login}" ${x.login===S.simSel?"selected":""}>${esc(x.nome)} · ${x.perms.includes("admin")?"Admin":esc(x.perms.map(p=>PERM_NOME[p]).join(", "))}</option>`).join("")}</select>
     <button class="btn primary" data-act="simular">Simular Acesso</button>
     ${S.user!==REAL_USER?`<p class="small muted" style="margin:0">Simulando: <b>${esc(ME().nome)}</b></p><button class="btn ghost sm" data-act="simvoltar">Voltar para o meu acesso</button>`:""}
+    ${MODO_DEMO?"":`<h3 class="ap-sub">Usuários</h3><button class="btn dark ap-usr" data-act="usuarios">${IC.users}Gerenciar usuários${nU?`<span class="sb-badge">${nU}</span>`:""}</button>`}
     <button class="iconbtn temabtn" data-act="tema" aria-label="${isDark()?"Usar tema claro":"Usar tema escuro"}">${isDark()?io("moon"):io("sun")}</button>
     <span class="spacer"></span>
     ${MODO_DEMO?`<div class="proto"><span class="eyebrow">Modo demonstração</span><span class="small muted">Dados fictícios. As alterações ficam só neste navegador.</span>

@@ -37,6 +37,8 @@ create table public.perfis (
   funcoes       text[] not null default '{}',
   pedido_senha  timestamptz,                   -- pessoa clicou em "Esqueci minha senha"
   trocar_senha  boolean not null default false, -- senha provisória: o app obriga a trocar no próximo login
+  foto          text,                          -- endereço da foto no Storage (espaço "fotos")
+  prefs         jsonb not null default '{}',   -- preferências: tela inicial da obra, tema
   criado_em     timestamptz not null default now(),
   aprovado_em   timestamptz,
   aprovado_por  text
@@ -238,7 +240,7 @@ for each row execute function public.novo_usuario();
 
 -- Lista de nomes (para mostrar "Fulano aprovou..." no histórico)
 create view public.perfis_publicos as
-  select login, nome, funcoes from public.perfis where status <> 'pendente' and public.eu_aprovado();
+  select login, nome, funcoes, foto from public.perfis where status <> 'pendente' and public.eu_aprovado();
 
 -- ---------------------------------------------------------------------
 -- 6. REGRAS DE ACESSO (RLS)
@@ -529,3 +531,26 @@ create policy "anexos ler" on storage.objects for select to authenticated
   using (bucket_id = 'anexos' and public.acesso_obra(((storage.foldername(name))[1])::bigint));
 create policy "anexos enviar" on storage.objects for insert to authenticated
   with check (bucket_id = 'anexos' and public.acesso_obra(((storage.foldername(name))[1])::bigint));
+
+-- ---------------------------------------------------------------------
+-- 10. FOTOS (usuários e capas das obras) e PREFERÊNCIAS — desde a v2.1.2
+-- ---------------------------------------------------------------------
+create or replace function public.salvar_prefs(p jsonb) returns void
+language sql security definer set search_path = public as $$
+  update perfis set prefs = coalesce(prefs,'{}') || coalesce(p,'{}') where id = auth.uid();
+$$;
+create or replace function public.salvar_foto(p_url text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if p_url is not null and (p_url not like 'https://%' or length(p_url) > 600) then raise exception 'endereço de foto inválido'; end if;
+  update perfis set foto = p_url where id = auth.uid();
+end $$;
+revoke execute on function public.salvar_prefs(jsonb), public.salvar_foto(text) from public, anon;
+grant execute on function public.salvar_prefs(jsonb), public.salvar_foto(text) to authenticated;
+
+insert into storage.buckets(id, name, public) values ('fotos','fotos', true) on conflict (id) do update set public = true;
+create policy "fotos obras admin" on storage.objects for insert to authenticated
+  with check (bucket_id = 'fotos' and (storage.foldername(name))[1] = 'obras' and public.sou_admin());
+create policy "fotos do proprio perfil" on storage.objects for insert to authenticated
+  with check (bucket_id = 'fotos' and (storage.foldername(name))[1] = 'perfis'
+              and (storage.foldername(name))[2] = auth.uid()::text and public.eu_aprovado());

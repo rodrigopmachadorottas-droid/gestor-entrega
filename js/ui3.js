@@ -105,8 +105,10 @@ function popupIndGerais(){
     return `<tr><th class="lbl">${esc(o.nome)}</th>${leg.map(l=>{const n=st.filter(s=>s===l).length; tot[l]+=n; return `<td>${n}${n&&us.length?` <span class="pct">${Math.round(n/us.length*100)}%</span>`:""}</td>`;}).join("")}<td class="tot">${us.length}</td></tr>`;
   }).join("");
   return `<div class="modal" role="dialog" aria-modal="true" aria-label="Indicadores gerais"><div class="scrim" data-act="homeind"></div><div class="box tall">
-    <div class="mhead"><div class="t"><b class="conf-t">Indicadores gerais</b><div class="small muted">Unidades de todas as obras por status na etapa escolhida</div></div><button class="iconbtn" data-act="homeind" aria-label="Fechar">${IC.close}</button></div>
-    <div class="mbody"><label class="row" style="gap:8px"><b>Etapa:</b><select class="inp" id="hi-etapa" data-hi="1" style="width:auto;min-width:240px">${ops.map(o=>`<option value="${o.id}" ${o.id===op.id?"selected":""}>${esc(o.nome)}</option>`).join("")}</select></label>
-    <div style="overflow-x:auto"><table class="kpi gerais"><thead><tr><th style="background:none"></th>${leg.map(l=>`<th><span class="row" style="gap:6px;justify-content:center;flex-wrap:nowrap"><i class="dot" style="background:${corInd(l)}"></i>${esc(l)}</span></th>`).join("")}<th class="tot">Unidades</th></tr></thead>
+    <div class="mhead"><div class="t"><b class="conf-t">Indicadores gerais</b><div class="small muted">Unidades de todas as obras por status na etapa escolhida</div></div>
+      <label class="hi-sel"><span>Etapa</span><select class="inp" id="hi-etapa" data-hi="1">${ops.map(o=>`<option value="${o.id}" ${o.id===op.id?"selected":""}>${esc(o.nome)}</option>`).join("")}</select></label>
+      <button class="iconbtn" data-act="homeind" aria-label="Fechar">${IC.close}</button></div>
+    <div class="mbody">
+    <div class="gerais-wrap"><table class="kpi gerais"><colgroup><col class="c-obra">${leg.map(()=>"<col>").join("")}<col class="c-tot"></colgroup><thead><tr><th class="lbl-h">Obra</th>${leg.map(l=>`<th style="background:${corInd(l)}">${esc(l)}</th>`).join("")}<th class="tot">Unidades</th></tr></thead>
     <tbody>${rows}</tbody><tfoot><tr><th>TOTAL</th>${leg.map(l=>`<td>${tot[l]}${tot[l]&&totAll?` (${Math.round(tot[l]/totAll*100)}%)`:""}</td>`).join("")}<td>${totAll}</td></tr></tfoot></table></div></div></div></div>`;
 }

@@ -78,14 +78,20 @@ async function lerTudo(tabela, colunas = "*", ordem = "id"){
   return out;
 }
 
-API.carregar = async function(){
+API.carregar = async function(comPassos){
+  const ROT = { obras:"as obras", obra_acessos:"os acessos às obras", clientes:"os clientes", locais:"os blocos e pavimentos", horarios:"os horários de vistoria",
+    unidades:"as unidades", tarefas_lista:"o histórico de tarefas", areas:"as áreas comuns", tarefas_ac:"as tarefas das áreas comuns", perfis_publicos:"os usuários" };
+  const falta = new Set(Object.keys(ROT));
+  const aviso = () => { if(!comPassos) return; const f = [...falta]; passo(f.length ? `Carregando ${ROT[f.at(-1)]}... (${10 - f.length} de 10)` : "Montando as telas..."); };
+  const ler = (t, c, o) => lerTudo(t, c, o).then(r => { falta.delete(t); aviso(); return r; });
+  aviso();
   const [obras, acessos, clientes, locais, horarios, unidades, tarefas, areas, tarefas_ac, pessoas] = await Promise.all([
-    lerTudo("obras"), lerTudo("obra_acessos", "*", "obra_id"), lerTudo("clientes"), lerTudo("locais"), lerTudo("horarios"),
-    lerTudo("unidades"), lerTudo("tarefas_lista"), lerTudo("areas"), lerTudo("tarefas_ac"), lerTudo("perfis_publicos", "*", "login")
+    ler("obras"), ler("obra_acessos", "*", "obra_id"), ler("clientes"), ler("locais"), ler("horarios"),
+    ler("unidades"), ler("tarefas_lista"), ler("areas"), ler("tarefas_ac"), ler("perfis_publicos", "*", "login")
   ]);
   const P = S.perfil;
-  const usuarios = pessoas.map((p, i) => ({ id: i + 1, login: p.login, nome: p.nome, perms: p.funcoes || [] }));
-  const eu = { id: 0, login: P.login, nome: P.nome, email: P.email, perms: P.funcoes || [] };
+  const usuarios = pessoas.map((p, i) => ({ id: i + 1, login: p.login, nome: p.nome, foto: p.foto || "", perms: p.funcoes || [] }));
+  const eu = { id: 0, login: P.login, nome: P.nome, email: P.email, foto: P.foto || "", perms: P.funcoes || [] };
   const k = usuarios.findIndex(x => x.login === P.login);
   if(k >= 0) usuarios[k] = { ...usuarios[k], ...eu, id: usuarios[k].id }; else usuarios.push(eu);
   DB = {
@@ -104,9 +110,9 @@ API.tirarFoto = function(){
   Object.keys(TABS).forEach(t => { API.snap[t] = new Map(DB[t].map(r => [r.id, fotoLinha(t, r)])); });
 };
 
-API.recarregar = async function(avisar){
+API.recarregar = async function(avisar, silencioso){
   await API.cadeia;                                   // espera gravações em andamento
-  S.carregando = "Sincronizando..."; render();
+  if(!silencioso){ S.carregando = "Sincronizando..."; render(); }
   try{
     await API.carregar();
     if(S.obraId && !obraById(S.obraId)){ S.obraId = null; S.screen = "home"; }
@@ -116,16 +122,19 @@ API.recarregar = async function(avisar){
     if(S.cli.edit && S.cli.edit !== "novo" && !clienteById(S.cli.edit)) S.cli.edit = null;
     if(S.loc.localId && S.loc.localId !== "ac" && !localById(S.loc.localId)) S.loc.localId = null;
     if(avisar) toast("Sucesso", "Informações sincronizadas");
-  }catch(e){ toast("Erro", "Não foi possível sincronizar", msgErro(e)); }
-  S.carregando = ""; render();
+  }catch(e){ if(!silencioso) toast("Erro", "Não foi possível sincronizar", msgErro(e)); }
+  S.carregando = "";
+  if(!silencioso || telaLivre()) render();
 };
+// nada aberto em que um redesenho possa atrapalhar quem está digitando
+function telaLivre(){ return !(S.conf || S.ag || S.loc.modal || S.hor || S.cli.edit != null || S.cli.novo || S.lote.on || S.senhaModal || S.loc.cfgAberta); }
 
 // Ao voltar para a aba depois de um tempo, atualiza sozinho (se não houver nada aberto)
 API.autoAtualizar = function(){
   if(MODO_DEMO || S.auth.tela || !DB) return;
   if(Date.now() - API.carregadoEm < 120000) return;
-  if(API.fila.length || API.ocupado || S.conf || S.ag || S.loc.modal || S.hor || S.cli.edit != null || S.cli.novo || S.lote.on || S.senhaModal) return;
-  API.recarregar(false);
+  if(API.fila.length || API.ocupado || !telaLivre()) return;
+  API.recarregar(false, true);
 };
 
 /* ---------- números de ID reservados ---------- */
@@ -266,4 +275,55 @@ API.admin = async function(fn, args){
   const { error } = await sb.rpc(fn, args);
   if(error) throw error;
   await API.carregarUsuarios();
+};
+
+/* ---------- preferências, foto do usuário e foto da obra ---------- */
+API.salvarPrefs = async function(p){
+  S.perfil = S.perfil || {}; S.perfil.prefs = { ...(S.perfil.prefs || {}), ...p };
+  if(MODO_DEMO){ try{ localStorage.setItem("ge-prefs", JSON.stringify(S.perfil.prefs)); }catch(_){} return; }
+  const { error } = await sb.rpc("salvar_prefs", { p });
+  if(error) toast("Erro", "Não foi possível salvar a preferência", msgErro(error));
+};
+// reduz a imagem no navegador antes de enviar (JPEG)
+function reduzirImagem(file, maxW, maxH, quadrado){
+  return new Promise((ok, falha) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      let sx = 0, sy = 0, sw = img.width, sh = img.height;
+      if(quadrado){ const m = Math.min(sw, sh); sx = (sw - m) / 2; sy = (sh - m) / 2; sw = sh = m; }
+      const k = Math.min(1, maxW / sw, maxH / sh), w = Math.round(sw * k), h = Math.round(sh * k);
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, w, h); g.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? ok({ blob: b, dataUrl: c.toDataURL("image/jpeg", 0.82) }) : falha(new Error("imagem inválida")), "image/jpeg", 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); falha(new Error("Não deu para ler esta imagem.")); };
+    img.src = url;
+  });
+}
+async function enviarFoto(caminho, blob){
+  const { error } = await sb.storage.from("fotos").upload(caminho, blob, { contentType: "image/jpeg", upsert: false });
+  if(error) throw error;
+  return sb.storage.from("fotos").getPublicUrl(caminho).data.publicUrl;
+}
+API.trocarMinhaFoto = async function(file){
+  const r = await reduzirImagem(file, 320, 320, true);
+  let url = r.dataUrl;
+  if(!MODO_DEMO){
+    url = await enviarFoto(`perfis/${S.perfil.id}/${Date.now()}.jpg`, r.blob);
+    const { error } = await sb.rpc("salvar_foto", { p_url: url }); if(error) throw error;
+  }
+  S.perfil = S.perfil || {}; S.perfil.foto = url;
+  const eu = userByLogin(REAL_USER); if(eu) eu.foto = url;
+  if(MODO_DEMO) salvarLocal();
+};
+API.removerMinhaFoto = async function(){
+  if(!MODO_DEMO){ const { error } = await sb.rpc("salvar_foto", { p_url: null }); if(error) throw error; }
+  if(S.perfil) S.perfil.foto = ""; const eu = userByLogin(REAL_USER); if(eu) eu.foto = "";
+  if(MODO_DEMO) salvarLocal();
+};
+API.trocarFotoObra = async function(obra, file){
+  const r = await reduzirImagem(file, 1000, 1000, false);
+  obra.foto_url = MODO_DEMO ? r.dataUrl : await enviarFoto(`obras/${obra.id}/${Date.now()}.jpg`, r.blob);
+  saveDB();
 };

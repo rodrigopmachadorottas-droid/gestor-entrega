@@ -1,9 +1,12 @@
 /* ================= EVENTOS ================= */
 function trocarUsuario(login){ S.user=login; S.confirmReset=false; resetFiltros(); S.popup=null; S.lote={on:false,q:[]}; S.obraId=null; S.screen="home"; S.nav=false;
   toast("Info",login===REAL_USER?"Voltou para o seu acesso":"Simulando acesso",ME().nome); }
-function aplicarTema(){ if(S.dark==null) delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme=S.dark?"dark":"light"; }
+function aplicarTema(){ document.documentElement.dataset.theme=S.dark?"dark":"light"; const m=document.querySelector('meta[name="theme-color"]'); if(m) m.content=S.dark?"#212329":"#FF9114"; }
+function aplicarPrefs(p){ p=p||{}; if(p.tema){ S.dark=p.tema==="dark"; aplicarTema(); try{localStorage.setItem("ge-tema",p.tema);}catch(_){} } }
+const TELAS_INICIAIS=[["indicadores","Indicadores"],["unidades","Unidades"],["areas","Áreas Comuns"],["agenda","Agenda"]];
+function telaInicialObra(){ const t=((S.perfil||{}).prefs||{}).tela; if(t==="agenda"&&!can(ME(),"admin","obra","excelencia","rc")) return "indicadores"; return TELAS_INICIAIS.some(x=>x[0]===t)?t:"indicadores"; }
 function bloqueadoPorLote(){ if(S.lote.q.length){ toast("Aviso","Você tem liberações não salvas","Toque em Liberar ou Cancelar antes de sair."); return true; } return false; }
-function entrarObra(id){ S.obraId=id; S.screen="indicadores"; S.nav=false; S.navObras=false; S.popup=null; S.busca=""; S.lote={on:false,q:[]}; S.loc={localId:null,n2:null,modal:null,cfgAberta:false}; S.hor=null; S.agd={mes:new Date(new Date().getFullYear(),new Date().getMonth(),1),dia:startOfDay(new Date()),busca:""}; resetFiltros(); }
+function entrarObra(id){ S.obraId=id; S.screen=telaInicialObra(); S.nav=false; S.navObras=false; S.popup=null; S.busca=""; S.lote={on:false,q:[]}; S.loc={localId:null,n2:null,modal:null,cfgAberta:false}; S.hor=null; S.agd={mes:new Date(new Date().getFullYear(),new Date().getMonth(),1),dia:startOfDay(new Date()),busca:""}; resetFiltros(); }
 
 document.addEventListener("click",e=>{
   const el=e.target.closest("[data-act]"); if(!el) return;
@@ -19,7 +22,11 @@ document.addEventListener("click",e=>{
     menuacoes(){ S.menuAcoes=!S.menuAcoes; },
     trocaobra(){ if(bloqueadoPorLote()) return; entrarObra(id); toast("Sucesso","Obra alterada",OBRA().nome); },
     ir(){ if(bloqueadoPorLote()) return; S.screen=el.dataset.to; S.nav=false; S.popup=null; S.drawer=false; if(S.screen==="horarios") S.hor=null; },
-    tema(){ const v=el.dataset.v; S.dark = v? v==="dark" : !isDark(); aplicarTema(); try{localStorage.setItem("ge-tema",S.dark?"dark":"light");}catch(_){} },
+    tema(){ const v=el.dataset.v; S.dark = v? v==="dark" : !isDark(); aplicarTema(); try{localStorage.setItem("ge-tema",S.dark?"dark":"light");}catch(_){} API.salvarPrefs({tema:S.dark?"dark":"light"}); },
+    telaini(){ API.salvarPrefs({tela:el.dataset.v}); toast("Sucesso","Tela inicial salva",TELAS_INICIAIS.find(x=>x[0]===el.dataset.v)[1]); },
+    locaba(){ S.locAba=el.dataset.v; if(S.locAba==="ac") S.loc.localId="ac"; else if(S.loc.localId==="ac") S.loc.localId=null; },
+    fotodel(){ API.removerMinhaFoto().then(()=>{ toast("Sucesso","Foto removida"); render(); }).catch(err=>toast("Erro","Não foi possível remover a foto",msgErro(err))); },
+    pdfund(){ gerarPdfUnidades(); },
     sync(){ S.nav=false; if(MODO_DEMO){ carregarLocal(); toast("Sucesso","Informações da obra sincronizadas"); } else API.recarregar(true); },
     reset(){ if(!S.confirmReset){ S.confirmReset=true; return; } S.confirmReset=false; if(!MODO_DEMO) return; DB=gerarDadosTeste(); salvarLocal(); if(S.obraId) entrarObra(S.obraId); toast("Info","Dados de teste restaurados"); },
     obra(){ entrarObra(id); },
@@ -80,7 +87,7 @@ document.addEventListener("click",e=>{
     cfgtoggle(){ S.loc.cfgAberta=!S.loc.cfgAberta; },
     cfgtipo(){ OBRA().config.tipo=el.dataset.v; saveDB(); },
     locsel(){ S.loc.localId=id; S.loc.n2=+el.dataset.n; },
-    locac(){ S.loc.localId="ac"; },
+    locac(){ S.loc.localId="ac"; S.locAba="ac"; },
     acnova(){ S.loc.modal={tipo:"ac",id:null}; },
     acedit(){ S.loc.modal={tipo:"ac",id}; },
     acsalvar(){ const nome=document.getElementById("ac-nome").value.trim(); if(!nome){ toast("Erro","Informe o nome da área comum"); return; }
@@ -145,6 +152,10 @@ document.addEventListener("input",e=>{
 document.addEventListener("change",e=>{
   const t=e.target;
   if(t.dataset.actChange==="simsel"){ S.simSel=t.value; return; }
+  if(t.id==="foto-eu"&&t.files[0]){ const f=t.files[0]; t.value=""; S.carregando="Enviando a foto..."; render();
+    API.trocarMinhaFoto(f).then(()=>toast("Sucesso","Foto atualizada")).catch(err=>toast("Erro","Não foi possível trocar a foto",msgErro(err))).finally(()=>{ S.carregando=""; render(); }); return; }
+  if(t.id==="foto-obra"&&t.files[0]){ const f=t.files[0]; t.value=""; S.carregando="Enviando a foto da obra..."; render();
+    API.trocarFotoObra(OBRA(),f).then(()=>toast("Sucesso","Foto da obra atualizada")).catch(err=>toast("Erro","Não foi possível trocar a foto",msgErro(err))).finally(()=>{ S.carregando=""; render(); }); return; }
   if(t.id==="conf-file"&&S.conf){ [...t.files].forEach(f=>{ if(f.size>20*1024*1024){ toast("Erro","Arquivo muito grande",f.name+" passa de 20 MB"); return; } S.conf.anexos.push({nome:f.name,tam:f.size,file:f}); }); render(); return; }
   if(t.dataset.conf&&S.conf){ S.conf[t.dataset.conf]=t.value; return; }
   if(t.dataset.hi){ S.homeInd.etapa=t.value; render(); return; }
