@@ -35,7 +35,7 @@ const IC={
   camera:sv('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.2";
+const VERSAO="v2.1.3";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -45,8 +45,8 @@ const S={conf:null,homeInd:null,adminPanel:false,simSel:"",menuAcoes:false,user:
   cli:{aba:"vinc",ubusca:"",filtro:"todas",und:null,q:"",novo:false,nform:{nome:"",telefone:"",email:""},busca:"",edit:null,form:{nome:"",telefone:"",email:""},del:false},hor:null,toasts:[],confirmReset:false,dark:false,locAba:"und"};
 const ME=()=>userByLogin(S.user);
 const OBRA=()=>obraById(S.obraId);
-function filtrosPadrao(u){ return {extras:can(u,"admin","obra","instalacoes"),f1:can(u,"admin","obra","instalacoes"),f2:can(u,"admin","obra","excelencia","rc"),f3:can(u,"admin","rc","financeiro"),blocos:[]}; }
-function fasesVisiveis(u){ return {extras:can(u,"admin","obra","instalacoes","excelencia"),f1:can(u,"admin","obra","instalacoes","excelencia"),f2:can(u,"admin","obra","excelencia","rc"),f3:can(u,"admin","obra","excelencia","rc","financeiro")}; }
+function filtrosPadrao(u){ return {extras:can(u,"admin","obra","instalacoes"),f1:can(u,"admin","obra","instalacoes"),f2:can(u,"admin","obra","qualidade","rc"),f3:can(u,"admin","rc","financeiro"),blocos:[]}; }
+function fasesVisiveis(u){ return {extras:can(u,"admin","obra","instalacoes","qualidade"),f1:can(u,"admin","obra","instalacoes","qualidade"),f2:can(u,"admin","obra","qualidade","rc"),f3:can(u,"admin","obra","qualidade","rc","financeiro")}; }
 function resetFiltros(){ const u=ME(); S.fil=filtrosPadrao(u); S.ind.fil=filtrosPadrao(u); S.ind.fil.blocos=[]; S.ind.ini=""; S.ind.fim=""; }
 
 function toast(tipo,txt,sub){ const id=Math.random(); S.toasts.push({id,tipo,txt,sub}); if(S.toasts.length>4) S.toasts.shift(); renderToasts(); setTimeout(()=>{S.toasts=S.toasts.filter(t=>t.id!==id); renderToasts();},3800); }
@@ -77,7 +77,7 @@ function telaHome(){
   return `<div class="home-z"><div class="home-top"><div class="wrap"><b>Controle das Unidades | Excelência Operacional</b><span class="home-ola"><b>${saudacao()}, ${esc(u.nome.split(" ")[0])}!</b>${topoAcoes()}</span></div></div>
   <section class="home-hero">
     <button class="logo-btn" data-act="adminpanel" aria-label="Gestor de Entrega"><img class="logo" src="${isDark()?LOGOS.branca:LOGOS.preta}" alt="Gestor de Entrega"></button>
-    ${can(u,"admin","gerente")?`<button class="toggle home-toggle ${S.homeInd?"on":""}" data-act="homeind" aria-label="Indicadores gerais das obras" title="Indicadores gerais"></button>`:""}
+    ${can(u,"admin")?`<button class="iconbtn home-dash ${S.homeInd?"on":""}" data-act="homeind" aria-label="Indicadores gerais das obras" title="Indicadores gerais">${io("indicadores")}</button>`:""}
   </section>
   <main class="home-body wrap"><h2>Obras</h2><div class="obras">
   ${obras.map(o=>{const ok=acesso(o); return `<button class="obra" data-act="obra" data-id="${o.id}" ${ok?"":"disabled"} aria-label="${esc(o.nome)}">
@@ -110,13 +110,13 @@ function desenharFotos(){
 function menuLateral(){
   if(!S.nav) return "";
   const u=ME(), it=(id,ic,txt,ok=true)=>ok?`<button class="sb-item ${S.screen===id?"on":""}" data-act="ir" data-to="${id}">${io(id)}${txt}</button>`:"";
-  const cfg=[it("locais","building","Locais",can(u,"admin")),it("clientes","users","Clientes",can(u,"admin")),it("horarios","clock","Horários",can(u,"admin","obra","excelencia"))].join("");
+  const cfg=[it("locais","building","Locais",can(u,"admin")),it("clientes","users","Clientes",can(u,"admin")),it("horarios","clock","Horários",can(u,"admin","obra","qualidade"))].join("");
   const obrasAcesso=DB.obras.filter(o=>can(u,"admin")||(", "+o.usuarios+", ").includes(", "+u.login+", "));
   return `<div class="scrim" data-act="navclose"></div><aside class="sidebar" aria-label="Menu">
     <div class="sb-head"><button class="logo-btn" data-act="home" aria-label="Voltar para as obras"><img src="${isDark()?LOGOS.branca:LOGOS.preta}" alt="Gestor de Entrega"></button><button data-act="ir" data-to="versoes">${VERSAO}</button></div>
     <nav class="sb-nav">
       <div class="sb-sec">EXECUÇÃO</div>${it("unidades","key","Unidades")}${it("areas","hammer","Áreas Comuns")}
-      <div class="sb-sec">GESTÃO À VISTA</div>${it("indicadores","chart","Indicadores")}${it("agenda","calendar","Agenda",can(u,"admin","obra","excelencia","rc"))}
+      <div class="sb-sec">GESTÃO À VISTA</div>${it("indicadores","chart","Indicadores")}${it("agenda","calendar","Agenda",can(u,"admin","obra","qualidade","rc"))}
       ${cfg?`<div class="sb-sec">CONFIGURAÇÕES</div>${cfg}`:""}
     </nav>
     <div class="sb-foot">
@@ -149,13 +149,13 @@ function painelAdmin(){
 
 /* ================= TELA: UNIDADES ================= */
 function unidadesObra(){ return DB.unidades.filter(u=>u.id_obra===S.obraId); }
-function ordenarUnidades(arr){ return arr.sort((a,b)=>nivel1Nome(a).localeCompare(nivel1Nome(b))||(a.nivel_2-b.nivel_2)||(numUnd(a.unidade)-numUnd(b.unidade))); }
+function ordenarUnidades(arr){ return arr.sort((a,b)=>nivel1Nome(a).localeCompare(nivel1Nome(b))||((a.nivel_2||0)-(b.nivel_2||0))||(numUnd(a.unidade)-numUnd(b.unidade))); }
 function blocosObra(){ return DB.locais.filter(l=>l.id_obra===S.obraId).map(l=>l.nivel1).sort(); }
 function colunasUnidades(){
   const u=ME(), cfg=OBRA().config, f=S.fil, C=[];
   if(f.extras){ C.push({h:"Fase",v:x=>FASES[(ETAPA[x.sub_etapa]||{}).f]||"",plain:1}); C.push({h:"Etapa",v:x=>(ETAPA[x.sub_etapa]||{}).n||"",plain:1}); C.push({h:"Cliente",v:x=>{const c=clienteById(x.id_cliente); return c?tituloCase(c.nome):"-";},plain:1,l:1}); }
   if(f.f1){ cfg.testes.forEach(k=>{const te=TESTES.find(t=>t.k===k); C.push({h:te.nome,col:te.col,v:x=>x[te.col],teste:1});});
-    if(can(u,"admin","obra","excelencia")) C.push({h:"Finalizando Unidade",v:x=>x.sub_etapa===3?"Pendente":x.sub_etapa>=4?"Concluído":""}); }
+    if(can(u,"admin","obra","qualidade")) C.push({h:"Finalizando Unidade",v:x=>x.sub_etapa===3?"Pendente":x.sub_etapa>=4?"Concluído":""}); }
   if(f.f2){ C.push({h:"Vistoria Qualidade",v:x=>x.rep_vistoria_at});
     if(cfg.previa) C.push({h:"Vistoria Prévia",v:x=>x.rep_vistoria_previa});
     C.push({h:"Agendamento RC",v:x=>x.agendamento}); C.push({h:"Vistoria Cliente",v:x=>x.rep_vistoria_cliente}); }

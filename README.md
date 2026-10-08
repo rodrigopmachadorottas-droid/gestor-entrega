@@ -23,6 +23,8 @@ O passo a passo completo para colocar no ar está no documento
 | `supabase/01_estrutura.sql` | cria tabelas, regras de acesso e funções (rodar 1x) |
 | `supabase/converter_sharepoint.py` | converte os CSV do SharePoint em SQL de importação |
 | `supabase/03_usuarios_antigos.sql` | cria os logins de quem já usava o app (senha inicial Rottas@2026, troca obrigatória) |
+| `supabase/04_atualizacao_2.1.2.sql` | fotos (usuário e obra) e preferências — rodar 1x no projeto que já está no ar |
+| `supabase/05_atualizacao_2.1.3.sql` | funções novas (Qualidade no lugar de Excelência, sem Gerente, Admin exclusivo) e casas sem pavimento — rodar 1x depois da 04 |
 | `supabase/99_zerar_tudo.sql` | apaga tudo para recomeçar (cuidado) |
 
 ## Rodar no computador
@@ -51,4 +53,4 @@ Os arquivos `02_dados_*.sql` e os CSV têm dados pessoais de clientes: **não su
 
 ## Publicar uma nova versão
 
-Altere os arquivos, troque `?v=2.1.1` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
+Altere os arquivos, troque `?v=2.1.3` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.

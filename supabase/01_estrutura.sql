@@ -22,8 +22,8 @@ create table public.funcoes (
   ordem  int  not null
 );
 insert into public.funcoes values
-  ('admin','Admin',1),('obra','Obra',2),('instalacoes','Instalações',3),('excelencia','Excelência',4),
-  ('rc','Relacionamento (RC)',5),('financeiro','Financeiro',6),('arquitetura','Arquitetura',7),('gerente','Gerente',8);
+  ('admin','Admin',1),('obra','Obra',2),('instalacoes','Instalações',3),('qualidade','Qualidade',4),
+  ('rc','Relacionamento (RC)',5),('financeiro','Financeiro',6),('arquitetura','Arquitetura',7);
 
 -- ---------------------------------------------------------------------
 -- 2. PERFIS (1 por pessoa que se cadastra no login)
@@ -294,8 +294,8 @@ create policy "obra muda local"  on public.locais for update to authenticated us
 create policy "obra apaga local" on public.locais for delete to authenticated using (public.tenho_funcao('obra') and public.acesso_obra(id_obra));
 
 create policy "ler horarios"  on public.horarios for select to authenticated using (public.acesso_obra(id_obra));
-create policy "cria horarios" on public.horarios for insert to authenticated with check (public.tenho_funcao('obra','excelencia') and public.acesso_obra(id_obra));
-create policy "muda horarios" on public.horarios for update to authenticated using (public.tenho_funcao('obra','excelencia') and public.acesso_obra(id_obra)) with check (public.acesso_obra(id_obra));
+create policy "cria horarios" on public.horarios for insert to authenticated with check (public.tenho_funcao('obra','qualidade') and public.acesso_obra(id_obra));
+create policy "muda horarios" on public.horarios for update to authenticated using (public.tenho_funcao('obra','qualidade') and public.acesso_obra(id_obra)) with check (public.acesso_obra(id_obra));
 
 create policy "ler unidades"    on public.unidades for select to authenticated using (public.acesso_obra(id_obra));
 create policy "obra cria unidade"  on public.unidades for insert to authenticated
@@ -334,19 +334,19 @@ begin
     elsif p_coluna = '' then
       return p_acao in ('finalizar','aprovarDireto','cancelar') and tenho_funcao('obra');
     elsif p_coluna in ('rep_vistoria_at','rep_vistoria_previa') then
-      return case when p_acao in ('aprovar','reprovar') then tenho_funcao('excelencia')
+      return case when p_acao in ('aprovar','reprovar') then tenho_funcao('qualidade')
                   when p_acao = 'corrigir' then tenho_funcao('obra') else false end;
     elsif p_coluna = 'agendamento' then
       return p_acao in ('agendar','cancelar') and tenho_funcao('rc');
     elsif p_coluna = 'rep_vistoria_cliente' then
-      return case when p_acao in ('aprovar','reprovar') then tenho_funcao('excelencia','obra')
+      return case when p_acao in ('aprovar','reprovar') then tenho_funcao('qualidade','obra')
                   when p_acao = 'corrigir' then tenho_funcao('obra') else false end;
     end if;
   elsif p_tipo = 'area' then
     if p_coluna = '' then
       return p_acao in ('liberar','cancelar') and tenho_funcao('obra');
     elsif p_coluna in ('rep_vistoria_qualidade','rep_vistoria_sindico') then
-      return case when p_acao in ('aprovar','reprovar') then tenho_funcao('excelencia')
+      return case when p_acao in ('aprovar','reprovar') then tenho_funcao('qualidade')
                   when p_acao = 'corrigir' then tenho_funcao('obra') else false end;
     elsif p_coluna = 'rep_vistoria_arq' then
       return case when p_acao in ('aprovar','reprovar') then tenho_funcao('arquitetura')
@@ -470,6 +470,9 @@ begin
     raise exception 'função inválida';
   end if;
   if coalesce(array_length(p_funcoes,1),0) = 0 then raise exception 'escolha pelo menos uma função'; end if;
+  if 'admin' = any(p_funcoes) and not exists(select 1 from perfis p join admins_iniciais a on lower(a.email) = p.email where p.id = p_id) then
+    raise exception 'a função Admin é exclusiva (só e-mails da lista admins_iniciais)';
+  end if;
   update perfis set status = 'aprovado', funcoes = p_funcoes,
          aprovado_em = coalesce(aprovado_em, now()), aprovado_por = coalesce(aprovado_por, meu_login())
    where id = p_id returning login into v_login;

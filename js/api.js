@@ -172,17 +172,24 @@ API._commit = async function(){
   // 1) ações do fluxo, na ordem em que foram feitas
   while(API.fila.length){ await API.enviarAcao(API.fila[0]); API.fila.shift(); }
 
-  // 2) inclusões
+  // 2) inclusões (em lote; números que faltam são reservados de uma vez)
   for(const t of ORDEM_INS){
-    for(const r of [...DB[t]]){
-      if(API.snap[t].has(r.id)) continue;
-      if(r.id < 0) trocarId(t, r.id, await idReal(t));
-      const linha = {}; TABS[t].ins.forEach(c => { if(r[c] !== undefined) linha[c] = r[c]; });
-      if(t === "clientes" && !linha.criado_por) linha.criado_por = REAL_USER;
-      const { error } = await sb.from(t).insert(linha);
+    const novos = DB[t].filter(r => !API.snap[t].has(r.id));
+    if(!novos.length) continue;
+    const temp = novos.filter(r => r.id < 0);
+    for(let i = 0; i < temp.length; i += 200){
+      const parte = temp.slice(i, i + 200);
+      const { data, error } = await sb.rpc("reservar_ids", { p_tabela: t, p_n: parte.length });
       if(error) throw error;
-      API.snap[t].set(r.id, fotoLinha(t, r));
+      parte.forEach((r, k) => trocarId(t, r.id, data[k]));
     }
+    const linhas = novos.map(r => { const o = {}; TABS[t].ins.forEach(c => { if(r[c] !== undefined) o[c] = r[c]; });
+      if(t === "clientes" && !o.criado_por) o.criado_por = REAL_USER; return o; });
+    for(let i = 0; i < linhas.length; i += 500){
+      const { error } = await sb.from(t).insert(linhas.slice(i, i + 500), { defaultToNull: false });
+      if(error) throw error;
+    }
+    novos.forEach(r => API.snap[t].set(r.id, fotoLinha(t, r)));
   }
   // 3) alterações (só os campos que mudaram)
   for(const t of Object.keys(TABS)){

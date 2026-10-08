@@ -52,21 +52,42 @@ function telaIndicadores(){
   else if(I.visao==="Visão Geral") body=indGeral();
   else if(I.visao==="Visão Aprovações") body=indAprovacoes();
   else body=indAcoes(op);
-  return topbar(`Indicadores (${OBRA().nome})`,filtroBtn(nFil))+`<main class="screen wide">${head}${body}</main>`+drawerInd();
+  return topbar(`Indicadores (${OBRA().nome})`,filtroBtn(nFil))+`<main class="screen ${I.visao==="Visão Unidades"?"":"wide"}">${head}${body}</main>`+drawerInd();
 }
 function corrigidosSet(){ return new Set(DB.tarefas.filter(t=>t.id_obra===S.obraId&&t.acao==="corrigir"&&t.etapa_antiga===7).map(t=>t.id_unidade)); }
 function indUnidades(op){
   const corr=corrigidosSet(), us=unidadesInd(), leg=LEGENDAS[op.tipo];
   const blocos=blocosInd(); if(!blocos.length) return `<div class="panel empty"><b>Nenhum bloco selecionado</b></div>`;
   return `<div class="blocos">${blocos.map(b=>{
-    const ub=us.filter(x=>nivel1Nome(x)===b), rows={};
-    ub.forEach(x=>{(rows[x.nivel_2]=rows[x.nivel_2]||[]).push(x);});
-    const ks=Object.keys(rows).map(Number).sort((a,b)=>b-a), cols=Math.max(1,...ks.map(k=>rows[k].length));
+    const ub=us.filter(x=>nivel1Nome(x)===b), linhas=linhasBloco(ub,OBRA().config), cols=Math.max(1,...linhas.map(r=>r.length));
     const st=ub.map(x=>statusInd(x,op,corr));
-    return `<div class="bloco"><div class="tiles" style="grid-template-columns:repeat(${cols},minmax(52px,1fr))">${ks.map(k=>rows[k].sort((a,b)=>numUnd(a.unidade)-numUnd(b.unidade)).map(x=>{const s=statusInd(x,op,corr); return `<button class="tile" style="background:${corInd(s)};border:0" data-act="abrirund" data-id="${x.id}" title="${esc(x.unidade)}: ${esc(s)}">${esc(x.unidade.replace(/^(AP|CASA) /,""))}</button>`;}).join("")+(rows[k].length<cols?"<span></span>".repeat(cols-rows[k].length):"")).join("")}</div>
+    return `<div class="bloco"><div class="tiles" data-cols="${cols}" style="grid-template-columns:repeat(${cols},var(--tw0))">${linhas.map(r=>r.map(x=>{const s=statusInd(x,op,corr); return `<button class="tile" style="background:${corInd(s)};border:0" data-act="abrirund" data-id="${x.id}" title="${esc(x.unidade)}: ${esc(s)}">${esc(x.unidade.replace(/^(AP|CASA) /,""))}</button>`;}).join("")+(r.length<cols?"<span></span>".repeat(cols-r.length):"")).join("")}</div>
       <h3>${esc(b)} (${ub.length} unidades)</h3>
       <div class="legend">${leg.map(l=>{const n=st.filter(s=>s===l).length; return `<span><i class="dot" style="background:${corInd(l)}"></i>${esc(l)}: <b class="tnum">${n}</b>${n&&ub.length?` <span class="muted tnum">(${Math.round(n/ub.length*100)}%)</span>`:""}</span>`;}).join("")}</div></div>`;}).join("")}</div>`;
 }
+/* Visão Unidades: monta as linhas de blocos e reparte a sobra da largura entre eles.
+   Cada bloco cresce na mesma proporção (blocos de larguras diferentes continuam proporcionais);
+   a última linha não fica maior que as de cima, e nada passa de 1,8x o tamanho normal. */
+function layoutBlocos(){
+  const box=document.querySelector(".blocos"); if(!box) return;
+  const bl=[...box.querySelectorAll(":scope > .bloco")]; if(!bl.length) return;
+  bl.forEach(b=>{ const t=b.querySelector(".tiles"); t.style.gridTemplateColumns=`repeat(${t.dataset.cols},var(--tw0))`; t.style.removeProperty("--th"); });
+  const gap=parseFloat(getComputedStyle(box).columnGap)||16, W=box.clientWidth-1;
+  const info=bl.map(b=>{ const t=b.querySelector(".tiles"); return {t,cols:+t.dataset.cols,g:parseFloat(getComputedStyle(t).columnGap)||5,w:b.getBoundingClientRect().width,tw:t.getBoundingClientRect().width}; });
+  const linhas=[]; let cur=[], soma=0;
+  info.forEach(i=>{ if(cur.length&&soma+gap+i.w>W){ linhas.push(cur); cur=[]; soma=0; } soma+=(cur.length?gap:0)+i.w; cur.push(i); });
+  if(cur.length) linhas.push(cur);
+  let fAnt=null;
+  linhas.forEach((L,k)=>{
+    const soma=L.reduce((a,i)=>a+i.w,0), livre=W-gap*(L.length-1);
+    let f=Math.min(livre/soma,1.8);
+    if(k===linhas.length-1&&linhas.length>1) f=Math.min(f,fAnt);
+    fAnt=f; if(f<=1.01) return;
+    L.forEach(i=>{ const tw=i.tw+i.w*(f-1), cw=Math.floor((tw-i.g*(i.cols-1))/i.cols*10)/10;
+      i.t.style.gridTemplateColumns=`repeat(${i.cols},${cw}px)`; i.t.style.setProperty("--th",Math.round(Math.min(54,Math.max(40,cw*.55)))+"px"); });
+  });
+}
+let _relayout; window.addEventListener("resize",()=>{ clearTimeout(_relayout); _relayout=setTimeout(layoutBlocos,120); });
 function indGeral(){
   const us=unidadesInd(), bl=blocosInd(), cfg=OBRA().config, f=S.ind.fil, tot=us.length;
   const etapas=ETAPAS.filter(e=>e.c!==41||cfg.previa);
@@ -168,13 +189,15 @@ function telaLocais(){
   if(L.localId!=="ac"&&!localById(L.localId)&&locais.length){ L.localId=locais[0].id; L.n2=1; }
   const acs=DB.areas.filter(a=>a.id_obra===S.obraId).sort((a,b)=>a.descricao.localeCompare(b.descricao));
   const loc=localById(L.localId);
-  const us=loc?ordenarUnidades(DB.unidades.filter(x=>x.nivel_1===loc.id&&x.nivel_2===L.n2)):[];
-  const vis=locais.map(l=>{const ns=l.niveis2.split(", ").map((n,i)=>[n,i+1]); const ok=!q||l.nivel1.toLowerCase().includes(q); return [l,ok?ns:ns.filter(([n])=>n.toLowerCase().includes(q))];}).filter(([l,ns])=>ns.length);
+  const casa=cfg.tipo==="casa";
+  const us=loc?ordenarUnidades(DB.unidades.filter(x=>x.nivel_1===loc.id&&(casa||x.nivel_2===L.n2))):[];
+  const vis=locais.map(l=>{const ns=casa?[[`Casas (${DB.unidades.filter(u=>u.nivel_1===l.id).length})`,0]]:l.niveis2.split(", ").filter(Boolean).map((n,i)=>[n,i+1]); const ok=!q||l.nivel1.toLowerCase().includes(q); return [l,ok?ns:ns.filter(([n])=>n.toLowerCase().includes(q))];}).filter(([l,ns])=>ns.length);
   const cfgModal=L.cfgAberta&&admin?`<div class="modal" role="dialog" aria-modal="true" aria-label="Configuração da obra"><div class="scrim" data-act="cfgtoggle"></div><div class="box sm2">
     <div class="mhead"><div class="t"><b class="conf-t">Configuração da obra</b><div class="small muted">${esc(o.nome)} · substitui as regras que antes eram fixas por ID de obra</div></div><button class="iconbtn" data-act="cfgtoggle" aria-label="Fechar">${IC.close}</button></div>
     <div class="mbody"><div class="field"><label>Foto de capa</label><div class="capa">${fotoObra(o)?`<img src="${esc(fotoObra(o))}" alt="Foto atual de ${esc(o.nome)}">`:`<div class="capa-vazia">Sem foto</div>`}
         <label class="btn sm ghost">${IC.camera}Alterar foto<input type="file" id="foto-obra" accept="image/*" hidden></label></div><span class="small muted">É a imagem do card da obra na tela inicial.</span></div>
       <div class="field"><label>Tipo da obra</label><div class="seg" style="align-self:flex-start"><button class="${cfg.tipo==="predio"?"on":""}" data-act="cfgtipo" data-v="predio">Prédio</button><button class="${cfg.tipo==="casa"?"on":""}" data-act="cfgtipo" data-v="casa">Casas</button></div></div>
+      ${cfg.tipo==="casa"?`<div class="field"><label for="cfg-cpl">Casas por linha na Visão Unidades</label><input class="inp tnum" type="number" min="1" max="40" id="cfg-cpl" data-cfgnum="casasPorLinha" value="${cfg.casasPorLinha||8}" style="max-width:120px"><span class="small muted">As casas de cada quadra aparecem em ordem, quebrando a linha a cada ${cfg.casasPorLinha||8}.</span></div>`:""}
       <div class="field"><label>Testes da validação técnica</label>${TESTES.map(t=>`<label class="chk"><input type="checkbox" id="cfg-${t.k}" data-cfgteste="${t.k}" ${cfg.testes.includes(t.k)?"checked":""}>${t.nome}</label>`).join("")}</div>
       <div class="field"><label>Etapas opcionais</label><label class="chk"><input type="checkbox" id="cfg-previa" data-cfg="previa" ${cfg.previa?"checked":""}>Vistoria Prévia depois da Qualidade</label><label class="chk"><input type="checkbox" id="cfg-direto" data-cfg="aprovarDireto" ${cfg.aprovarDireto?"checked":""}>Permitir "Aprovar direto" (pula a vistoria Qualidade)</label></div></div></div></div>`:"";
   const modal=L.modal?modalLocais():"";
@@ -185,12 +208,12 @@ function telaLocais(){
       ${S.locAba==="ac"?`<div class="loc-list"><p class="muted small" style="padding:4px 8px 0;margin:0">Áreas que não pertencem a um bloco: salão de festas, piscina, guarita... Toque em uma para renomear ou no + para adicionar.</p></div>`:`
       <div class="row">${buscaBox("locBusca",L.busca||"","Pesquisar bloco ou pavimento").replace('class="search"','class="search loc-search"')}</div>
       <div class="loc-list" id="loc-list" data-keep-scroll>${vis.map(([l,ns])=>`<div class="loc-grp"><button class="loc-h" data-act="locedit" data-id="${l.id}" title="Editar ${esc(l.nivel1)}">${esc(l.nivel1)}${IC.edit}</button>
-        ${ns.map(([n,i])=>`<button class="loc-p ${L.localId===l.id&&L.n2===i?"on":""}" data-act="locsel" data-id="${l.id}" data-n="${i}">${esc(n)}</button>`).join("")}</div>`).join("")
+        ${ns.map(([n,i])=>`<button class="loc-p ${L.localId===l.id&&(casa||L.n2===i)?"on":""}" data-act="locsel" data-id="${l.id}" data-n="${i}">${esc(n)}</button>`).join("")}</div>`).join("")
         ||`<p class="muted small" style="padding:8px">Nada encontrado.</p>`}
-        <button class="loc-novo" data-act="locnovo">${IC.plus}Nova ${cfg.tipo==="casa"?"quadra":"bloco"}</button></div>`}
+        <button class="loc-novo" data-act="locnovo">${IC.plus}${casa?"Nova quadra":"Novo bloco"}</button></div>`}
     </aside>
     <section class="loc-main">${L.localId==="ac"?`<h2 class="loc-crumb">${esc(o.nome)} &gt; Áreas Comuns</h2>
-      <div class="loc-units ac">${acs.map(a=>`<button data-act="acedit" data-id="${a.id}">${esc(a.descricao)}<span class="small muted">${esc(ETAPA_AC[a.sub_etapa].n)}</span></button>`).join("")}<button class="add" data-act="acnova" aria-label="Adicionar área comum">${IC.plus}</button></div>`:loc?`<h2 class="loc-crumb">${esc(o.nome)} &gt; ${esc(loc.nivel1)} &gt; ${esc(loc.niveis2.split(", ")[L.n2-1]||"")}</h2>
+      <div class="loc-units ac">${acs.map(a=>`<button data-act="acedit" data-id="${a.id}">${esc(a.descricao)}<span class="small muted">${esc(ETAPA_AC[a.sub_etapa].n)}</span></button>`).join("")}<button class="add" data-act="acnova" aria-label="Adicionar área comum">${IC.plus}</button></div>`:loc?`<h2 class="loc-crumb">${esc(o.nome)} &gt; ${esc(loc.nivel1)}${casa?"":` &gt; ${esc(loc.niveis2.split(", ")[L.n2-1]||"")}`}</h2>
       <div class="loc-units">${us.map(x=>`<button data-act="undedit" data-id="${x.id}">${esc(x.unidade)}</button>`).join("")}<button class="add" data-act="undnova" aria-label="Adicionar unidade">${IC.plus}</button></div>`
       :`<div class="empty"><b>Nenhum local cadastrado</b><span>Crie o primeiro bloco ou quadra na lista à esquerda.</span></div>`}</section>
   </main>${modal}${cfgModal}`;
@@ -204,15 +227,49 @@ function modalLocais(){
       <div class="mfoot">${podeExcluir?`<button class="btn ${M.del?"bad":"ghost"}" data-act="acdel">${M.del?"Confirmar exclusão":"Excluir"}</button><span class="spacer"></span>`:""}<button class="btn ghost" data-act="locfechar">Cancelar</button><button class="btn primary" data-act="acsalvar">Salvar</button></div></div></div>`; }
   if(M.tipo==="und"){ const x=M.id?DB.unidades.find(u=>u.id===M.id):null, podeExcluir=x&&x.sub_etapa===1;
     return `<div class="modal" role="dialog" aria-modal="true"><div class="scrim" data-act="locfechar"></div><div class="box sm"><div class="mhead"><b class="t h2">${x?"Editar unidade":"Adicionar unidade"}</b><button class="iconbtn" data-act="locfechar" aria-label="Fechar">${IC.close}</button></div>
-      <div class="mbody"><div class="field"><label for="und-nome">Nome da unidade</label><input class="inp" id="und-nome" value="${esc(x?x.unidade:"")}" placeholder="${OBRA().config.tipo==="casa"?"Ex.: CASA 12":"Ex.: AP 305"}"></div>
+      <div class="mbody"><div class="field"><label for="und-nome">Nome da unidade</label><input class="inp" id="und-nome" value="${esc(x?x.unidade:(M.sug||""))}" placeholder="${OBRA().config.tipo==="casa"?"Ex.: CASA 12":"Ex.: AP 305"}"></div>
       ${x&&!podeExcluir?`<span class="small muted">Só dá para excluir unidades que ainda estão na Liberação de Testes.</span>`:""}</div>
       <div class="mfoot">${podeExcluir?`<button class="btn ${M.del?"bad":"ghost"}" data-act="unddel">${M.del?"Confirmar exclusão":"Excluir"}</button><span class="spacer"></span>`:""}<button class="btn ghost" data-act="locfechar">Cancelar</button><button class="btn primary" data-act="undsalvar">Salvar</button></div></div></div>`; }
-  const l=M.id?localById(M.id):null, temUnd=l&&DB.unidades.some(u=>u.nivel_1===l.id);
-  return `<div class="modal" role="dialog" aria-modal="true"><div class="scrim" data-act="locfechar"></div><div class="box sm"><div class="mhead"><b class="t h2">${l?"Editar local":"Novo local"}</b><button class="iconbtn" data-act="locfechar" aria-label="Fechar">${IC.close}</button></div>
-    <div class="mbody"><div class="field"><label for="loc-n1">Nome (bloco ou quadra)</label><input class="inp" id="loc-n1" value="${esc(l?l.nivel1:"")}" placeholder="Ex.: Bloco H"></div>
-    <div class="field"><label for="loc-n2">Pavimentos ou fileiras, separados por vírgula</label><input class="inp" id="loc-n2" value="${esc(l?l.niveis2:"")}" placeholder="1° Pavimento, 2° Pavimento, 3° Pavimento"><span class="small muted">A ordem define como as unidades aparecem nos indicadores (o primeiro fica embaixo).</span></div></div>
+  const l=M.id?localById(M.id):null, temUnd=l&&DB.unidades.some(u=>u.nivel_1===l.id), casa=OBRA().config.tipo==="casa";
+  const F=M.f||(M.f=formLocal(l,casa)), plano=planoUnidades(F,l,casa);
+  const campos=casa?`<div class="field"><label for="loc-n1">Nome da quadra</label><input class="inp" id="loc-n1" data-locf="n1" value="${esc(F.n1)}" placeholder="Ex.: Quadra 7"></div>
+      <div class="row2"><div class="field"><label for="loc-qt">Número de casas</label><input class="inp tnum" type="number" min="0" max="300" id="loc-qt" data-locf="qt" value="${esc(F.qt)}"></div>
+      <div class="field"><label for="loc-ini">Primeira casa</label><input class="inp tnum" type="number" min="1" id="loc-ini" data-locf="ini" value="${esc(F.ini)}"></div></div>`
+    :`<div class="field"><label for="loc-n1">Nome do bloco</label><input class="inp" id="loc-n1" data-locf="n1" value="${esc(F.n1)}" placeholder="Ex.: Bloco H"></div>
+      <div class="row2"><div class="field"><label for="loc-pav">Pavimentos</label><input class="inp tnum" type="number" min="1" max="40" id="loc-pav" data-locf="pav" value="${esc(F.pav)}"></div>
+      <div class="field"><label for="loc-qt">Unidades por andar</label><input class="inp tnum" type="number" min="0" max="30" id="loc-qt" data-locf="qt" value="${esc(F.qt)}"></div></div>`;
+  const prev=plano.novas.length?`Vai criar <b>${plano.novas.length}</b> unidade(s): ${esc(plano.novas[0].nome)} até ${esc(plano.novas.at(-1).nome)}${plano.existentes?`. ${plano.existentes} já existe(m) e fica(m) como está(ão)`:""}.`
+    :plano.total?"Todas essas unidades já existem.":"Nenhuma unidade para criar.";
+  return `<div class="modal" role="dialog" aria-modal="true"><div class="scrim" data-act="locfechar"></div><div class="box sm"><div class="mhead"><b class="t h2">${l?(casa?"Editar quadra":"Editar bloco"):(casa?"Nova quadra":"Novo bloco")}</b><button class="iconbtn" data-act="locfechar" aria-label="Fechar">${IC.close}</button></div>
+    <div class="mbody">${campos}
+      <label class="chk"><input type="checkbox" id="loc-gerar" data-locf="gerar" ${F.gerar?"checked":""}>${l?"Criar as unidades que faltam":"Criar as unidades automaticamente"}</label>
+      ${F.gerar?`<div class="loc-prev small">${prev}</div>`:""}
+      <span class="small muted">${casa?"Padrão de nome: CASA 1, CASA 2... em sequência na obra.":"Padrão de nome: AP + andar + número (1° andar, apto 1 = AP 101; 10° andar = AP 1001)."}</span></div>
     <div class="mfoot">${l&&!temUnd?`<button class="btn ${M.del?"bad":"ghost"}" data-act="locdel">${M.del?"Confirmar exclusão":"Excluir"}</button><span class="spacer"></span>`:""}<button class="btn ghost" data-act="locfechar">Cancelar</button><button class="btn primary" data-act="locsalvar">Salvar</button></div></div></div>`;
 }
+const numCasa=s=>{const m=/^CASA\s+(\d+)/i.exec(s||""); return m?+m[1]:0;};
+function formLocal(l,casa){
+  const us=l?DB.unidades.filter(u=>u.nivel_1===l.id):[];
+  if(casa){ const nums=us.map(u=>numCasa(u.unidade)).filter(Boolean), todas=DB.unidades.filter(u=>u.id_obra===S.obraId).map(u=>numCasa(u.unidade)).filter(Boolean);
+    return {n1:l?l.nivel1:`Quadra ${DB.locais.filter(x=>x.id_obra===S.obraId).length+1}`, qt:l?us.length:8, ini:l?(nums.length?Math.min(...nums):1):(todas.length?Math.max(...todas)+1:1), gerar:!l}; }
+  const pav=l&&l.niveis2?l.niveis2.split(", ").filter(Boolean).length:4, porAndar={}; us.forEach(u=>{porAndar[u.nivel_2]=(porAndar[u.nivel_2]||0)+1;});
+  return {n1:l?l.nivel1:"", pav, qt:l?Math.max(0,...Object.values(porAndar)):4, gerar:!l};
+}
+function planoUnidades(F,l,casa){
+  const lista=[], qt=Math.max(0,Math.min(casa?300:30,parseInt(F.qt)||0));
+  if(casa){ const ini=Math.max(1,parseInt(F.ini)||1); for(let i=0;i<qt;i++) lista.push({nome:`CASA ${ini+i}`,pav:null}); }
+  else { const pav=Math.max(1,Math.min(40,parseInt(F.pav)||1)); for(let p=1;p<=pav;p++) for(let k=1;k<=qt;k++) lista.push({nome:`AP ${p}${pad(k)}`,pav:p}); }
+  const existe=new Set(DB.unidades.filter(u=>casa?u.id_obra===S.obraId:(l&&u.nivel_1===l.id)).map(u=>u.unidade.toUpperCase()));
+  const novas=lista.filter(x=>!existe.has(x.nome));
+  return {novas,total:lista.length,existentes:lista.length-novas.length};
+}
+function novaUnidade(nivel_1,nivel_2,nome){ return {id:nextId("unidades"),id_obra:S.obraId,nivel_1,nivel_2,unidade:nome,modulo:"",id_cliente:null,sub_etapa:1,rep_teste_esgoto:"",rep_teste_aguafria:"",rep_teste_dreno:"",rep_teste_gas:"",rep_teste_eletrico:"",rep_vistoria_at:"",rep_vistoria_previa:"",rep_vistoria_cliente:"",agendamento:"",financeiro_status:"",financeiro_motivo:"",prioridade:""}; }
+function proximaUnidade(){
+  if(OBRA().config.tipo==="casa"){ const t=DB.unidades.filter(u=>u.id_obra===S.obraId).map(u=>numCasa(u.unidade)); return `CASA ${Math.max(0,...t)+1}`; }
+  const L=S.loc, ks=DB.unidades.filter(u=>u.nivel_1===L.localId&&u.nivel_2===L.n2).map(u=>{const m=new RegExp("^AP\\s*"+L.n2+"(\\d{2})$","i").exec(u.unidade); return m?+m[1]:0;});
+  return `AP ${L.n2}${pad(Math.max(0,...ks)+1)}`;
+}
+
 
 /* ================= TELA: HORÁRIOS ================= */
 function carregarHor(){ S.hor={obraId:S.obraId,draft:Object.fromEntries(DIAS.map(([k])=>[k,horariosDia(S.obraId,k)]))}; }
@@ -228,7 +285,7 @@ function telaHorarios(){
 
 /* ================= TELA: VERSÕES ================= */
 function telaVersoes(){
-  const V=[["v2.1.2 (07/10/2026)",["Ícone do app para instalar no celular e ícone redondo na aba do navegador.","Configurações Admin (logo da tela inicial): simular acesso e gerenciar usuários.","Sair pelo ícone ao lado do seu nome no menu; foto do usuário e cores nas iniciais.","Preferências no perfil: tela inicial da obra e tema (claro é o padrão).","Locais, Clientes e Usuários só para admin; Locais com abas Unidades e Áreas comuns.","Foto de capa da obra na configuração.","Agenda: cor da vistoria pelo resultado (agendada, aprovada, reprovada).","Indicadores gerais redesenhados e PDF A4 da Visão Unidades.","Atualização em segundo plano sem a tela de Sincronizando; nova tela de abertura."]],["v2.1.1 (05/10/2026)",["Usuários do app antigo já entram cadastrados e aprovados, com as mesmas funções e obras.","Senha provisória obriga a criar uma senha própria no primeiro login."]],["v2.1.0 (05/10/2026)",["Versão web em produção: Vercel + Supabase, com os dados importados do SharePoint.","Login com e-mail e senha; novos acessos ficam pendentes até o admin aprovar.","Tela Usuários (admin): aprovar, escolher funções e obras, bloquear e definir senha provisória.","Função Gerente (antigo \"supervisor\"): vê os indicadores gerais na tela inicial.","Anexos guardados de verdade (teste de gás) e assinatura do cliente carregada sob demanda.","Ações conferidas no servidor: permissão por função e aviso quando outra pessoa mexeu antes."]],["v2.0.4 (05/10/2026)",["Cadastro de áreas comuns na tela de Locais."]],["v2.0.3 (05/10/2026)",["Painel de filtros no design do app original."]],["v2.0.2 (05/10/2026)",["Tela de Locais no layout do app original; configuração da obra em botão no cabeçalho.","Modo escuro mantém o cabeçalho laranja e o fundo desfocado do menu.","Novas cores do cabeçalho das etapas e da tabela de unidades."]],["v2.0.1 (05/10/2026)",["Tela de perfil com acessos, obras e tarefas feitas.","Nova tela de clientes: vínculo por unidade com busca de cliente e cadastro rápido.","Checklist também na reprova da Qualidade e na Vistoria do Cliente, com assinatura do cliente.","Anexos só na aprovação do teste de Gás.","Popup mantém a rolagem depois de uma ação; botões alinhados à direita; linha do tempo nas movimentações.","Ajustes para celular e proporções das telas."]],["v2.0.0 (05/10/2026)",["Botões de ação abrem uma confirmação com observação e anexos. Reprova de teste pede o motivo e a aprovação da Qualidade pede o checklist.","Agendamento abre como uma aba do próprio popup da unidade.","Indicadores gerais de todas as obras na tela inicial (admin).","Ícones originais no menu, linhas verticais nas tabelas e ajustes de rolagem."]],["v2.0 · protótipo web (05/10/2026)",["Recriação do app como site, com os mesmos fluxos e telas.","Regras por obra viraram configuração: testes ativos, Vistoria Prévia e Aprovar direto.","Correções: cores e contagens de Gás, Dreno e Vistoria Prévia nos indicadores; Visão Aprovações inclui Gás e Prévia.","Liberação em lote passa a registrar as tarefas no histórico.","Horário cheio fica bloqueado no agendamento; cancelar agendamento mantém o número da vistoria.","Agenda com busca funcionando e vistorias das áreas comuns."]],
+  const V=[["v2.1.3 (08/10/2026)",["Funções: Excelência virou Qualidade e a função Gerente saiu; Admin é só do Rodrigo.","Indicadores gerais abrem por um ícone na tela inicial.","Visão Unidades quebra os blocos em linhas (rolagem vertical) e reparte a largura da tela entre os blocos de cada linha.","Obras de casas: só quadras, com N casas por linha (configuração da obra).","Locais: cria bloco com pavimentos e unidades por andar (AP 101...) e quadra com casas em sequência (CASA 1...).","Celular: cabeçalho da tela inicial em uma linha, Horários e Cadastro de clientes ajustados."]],["v2.1.2 (07/10/2026)",["Ícone do app para instalar no celular e ícone redondo na aba do navegador.","Configurações Admin (logo da tela inicial): simular acesso e gerenciar usuários.","Sair pelo ícone ao lado do seu nome no menu; foto do usuário e cores nas iniciais.","Preferências no perfil: tela inicial da obra e tema (claro é o padrão).","Locais, Clientes e Usuários só para admin; Locais com abas Unidades e Áreas comuns.","Foto de capa da obra na configuração.","Agenda: cor da vistoria pelo resultado (agendada, aprovada, reprovada).","Indicadores gerais redesenhados e PDF A4 da Visão Unidades.","Atualização em segundo plano sem a tela de Sincronizando; nova tela de abertura."]],["v2.1.1 (05/10/2026)",["Usuários do app antigo já entram cadastrados e aprovados, com as mesmas funções e obras.","Senha provisória obriga a criar uma senha própria no primeiro login."]],["v2.1.0 (05/10/2026)",["Versão web em produção: Vercel + Supabase, com os dados importados do SharePoint.","Login com e-mail e senha; novos acessos ficam pendentes até o admin aprovar.","Tela Usuários (admin): aprovar, escolher funções e obras, bloquear e definir senha provisória.","Função Gerente (antigo \"supervisor\"): vê os indicadores gerais na tela inicial.","Anexos guardados de verdade (teste de gás) e assinatura do cliente carregada sob demanda.","Ações conferidas no servidor: permissão por função e aviso quando outra pessoa mexeu antes."]],["v2.0.4 (05/10/2026)",["Cadastro de áreas comuns na tela de Locais."]],["v2.0.3 (05/10/2026)",["Painel de filtros no design do app original."]],["v2.0.2 (05/10/2026)",["Tela de Locais no layout do app original; configuração da obra em botão no cabeçalho.","Modo escuro mantém o cabeçalho laranja e o fundo desfocado do menu.","Novas cores do cabeçalho das etapas e da tabela de unidades."]],["v2.0.1 (05/10/2026)",["Tela de perfil com acessos, obras e tarefas feitas.","Nova tela de clientes: vínculo por unidade com busca de cliente e cadastro rápido.","Checklist também na reprova da Qualidade e na Vistoria do Cliente, com assinatura do cliente.","Anexos só na aprovação do teste de Gás.","Popup mantém a rolagem depois de uma ação; botões alinhados à direita; linha do tempo nas movimentações.","Ajustes para celular e proporções das telas."]],["v2.0.0 (05/10/2026)",["Botões de ação abrem uma confirmação com observação e anexos. Reprova de teste pede o motivo e a aprovação da Qualidade pede o checklist.","Agendamento abre como uma aba do próprio popup da unidade.","Indicadores gerais de todas as obras na tela inicial (admin).","Ícones originais no menu, linhas verticais nas tabelas e ajustes de rolagem."]],["v2.0 · protótipo web (05/10/2026)",["Recriação do app como site, com os mesmos fluxos e telas.","Regras por obra viraram configuração: testes ativos, Vistoria Prévia e Aprovar direto.","Correções: cores e contagens de Gás, Dreno e Vistoria Prévia nos indicadores; Visão Aprovações inclui Gás e Prévia.","Liberação em lote passa a registrar as tarefas no histórico.","Horário cheio fica bloqueado no agendamento; cancelar agendamento mantém o número da vistoria.","Agenda com busca funcionando e vistorias das áreas comuns."]],
     ["v1.1.0 (12/02/2025)",["Indicadores"]],["v1.0.0 (18/11/2025)",["Versão inicial!","Criação do banco de dados","Criação do logo","Tela Home, seletor de obras"]]];
   return topbar("Versões")+`<main class="screen"><section class="panel" style="max-width:760px">${V.map(([t,l])=>`<h2 class="h3" style="margin:6px 0">${esc(t)}</h2><ul style="margin:0 0 18px;padding-left:20px">${l.map(i=>`<li>${esc(i)}</li>`).join("")}</ul>`).join("")}</section></main>`;
 }
@@ -253,7 +310,7 @@ function render(){
   if(!S.auth.tela) h+=extrasAuth();
   document.documentElement.classList.toggle("lock",!!(S.senhaModal||S.popup||S.nav||S.drawer||S.adminPanel||S.loc.modal||S.loc.cfgAberta||S.homeInd||S.conf));
   document.getElementById("app").innerHTML=h;
-  if(!S.auth.tela){ desenharFotos(); initSig(); }
+  if(!S.auth.tela){ desenharFotos(); initSig(); layoutBlocos(); }
   Object.entries(scr).forEach(([id,[t,l]])=>{const e=document.getElementById(id); if(e){e.scrollTop=t;e.scrollLeft=l;}});
   window.scrollTo(winX,winY);
   if(fid){ const e=document.getElementById(fid); if(e){ e.focus({preventScroll:true}); if(sel&&e.setSelectionRange) try{e.setSelectionRange(sel[0],sel[1]);}catch(_){} } }

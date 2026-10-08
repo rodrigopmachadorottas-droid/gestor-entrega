@@ -107,7 +107,7 @@ function secaoVisivel(user,...ps){ return can(user,"admin",...ps); }
 function secoesUnidade(u,user,fases){
   const cfg=obraById(u.id_obra).config, T=DB.tarefas.filter(t=>t.id_unidade===u.id).sort((a,b)=>a.data.localeCompare(b.data));
   const S=[];
-  if(fases.f1 && secaoVisivel(user,"obra","instalacoes","excelencia")){
+  if(fases.f1 && secaoVisivel(user,"obra","instalacoes","qualidade")){
     cfg.testes.forEach(k=>{
       const te=TESTES.find(x=>x.k===k), v=u[te.col], acts=[];
       if(blank(v)&&can(user,"obra")) acts.push({a:"liberar",l:"Liberar",k:"info"});
@@ -129,16 +129,16 @@ function secoesUnidade(u,user,fases){
     });
     S.push({key:"finalizando",col:"",titulo:"Finalizando Unidade",status:u.sub_etapa<=3?"Pendente":"Concluído",moves:mv,acts});
   }
-  if(fases.f2 && secaoVisivel(user,"obra","excelencia") && !blank(u.rep_vistoria_at)){
+  if(fases.f2 && secaoVisivel(user,"obra","qualidade") && !blank(u.rep_vistoria_at)){
     const v=u.rep_vistoria_at, acts=[];
-    if(has(v,"Pendente")&&can(user,"excelencia")){ acts.push({a:"aprovar",l:"Aprovar",k:"ok"}); acts.push({a:"reprovar",l:"Reprovar",k:"bad"}); }
+    if(has(v,"Pendente")&&can(user,"qualidade")){ acts.push({a:"aprovar",l:"Aprovar",k:"ok"}); acts.push({a:"reprovar",l:"Reprovar",k:"bad"}); }
     if(has(v,"Reprovado")&&can(user,"obra")) acts.push({a:"corrigir",l:"Corrigir",k:"primary"});
     const mv=T.filter(t=>t.coluna==="rep_vistoria_at"||(t.coluna===""&&t.acao==="finalizar"&&t.etapa_nova===4)).map(t=>t.coluna===""?mov(t,"info","liberou a unidade para vistoria Qualidade."):movVist(t));
     S.push({key:"rep_vistoria_at",col:"rep_vistoria_at",titulo:"Vistoria Qualidade",status:v,moves:mv,acts});
   }
-  if(fases.f2 && cfg.previa && secaoVisivel(user,"obra","excelencia") && !blank(u.rep_vistoria_previa)){
+  if(fases.f2 && cfg.previa && secaoVisivel(user,"obra","qualidade") && !blank(u.rep_vistoria_previa)){
     const v=u.rep_vistoria_previa, acts=[];
-    if(has(v,"Pendente")&&can(user,"excelencia")){ acts.push({a:"aprovar",l:"Aprovar",k:"ok"}); acts.push({a:"reprovar",l:"Reprovar",k:"bad"}); }
+    if(has(v,"Pendente")&&can(user,"qualidade")){ acts.push({a:"aprovar",l:"Aprovar",k:"ok"}); acts.push({a:"reprovar",l:"Reprovar",k:"bad"}); }
     if(has(v,"Reprovado")&&can(user,"obra")) acts.push({a:"corrigir",l:"Corrigir",k:"primary"});
     const mv=T.filter(t=>t.coluna==="rep_vistoria_previa"||(t.coluna==="rep_vistoria_at"&&t.acao==="aprovar"&&t.etapa_nova===41)).map(t=>t.coluna==="rep_vistoria_at"?mov(t,"info","liberou a unidade para vistoria Prévia."):movVist(t));
     S.push({key:"rep_vistoria_previa",col:"rep_vistoria_previa",titulo:"Vistoria Prévia",status:v,moves:mv,acts});
@@ -154,9 +154,9 @@ function secoesUnidade(u,user,fases){
     });
     S.push({key:"agendamento",col:"agendamento",titulo:"Agendamento com Cliente",status:u.agendamento,moves:mv,acts});
   }
-  if(fases.f2 && secaoVisivel(user,"obra","excelencia") && !blank(u.rep_vistoria_cliente)){
+  if(fases.f2 && secaoVisivel(user,"obra","qualidade") && !blank(u.rep_vistoria_cliente)){
     const v=u.rep_vistoria_cliente, acts=[], agendado=has(u.agendamento,"/");
-    if(has(v,"Pendente")&&agendado&&can(user,"excelencia","obra")){ acts.push({a:"aprovar",l:"Aprovar",k:"ok"}); acts.push({a:"reprovar",l:"Reprovar",k:"bad"}); }
+    if(has(v,"Pendente")&&agendado&&can(user,"qualidade","obra")){ acts.push({a:"aprovar",l:"Aprovar",k:"ok"}); acts.push({a:"reprovar",l:"Reprovar",k:"bad"}); }
     if(has(v,"Reprovado")&&can(user,"obra")) acts.push({a:"corrigir",l:"Corrigir",k:"primary"});
     const mv=T.filter(t=>t.coluna==="rep_vistoria_cliente"||(t.coluna==="agendamento"&&t.acao==="agendar")).map(t=>t.coluna==="agendamento"?mov(t,"info",`agendou a ${t.repeticao}ª vistoria com o cliente para ${t.agendamento}.`):movVist(t));
     S.push({key:"rep_vistoria_cliente",col:"rep_vistoria_cliente",titulo:"Vistoria do Cliente",status:v,moves:mv,acts,aviso:has(v,"Pendente")&&!agendado?"Aguardando agendamento pelo RC.":""});
@@ -185,14 +185,14 @@ function secoesArea(a,user){
     if(has(v,"Pendente")&&(col!=="rep_vistoria_sindico"||has(a.agendamento,"/"))&&can(user,quem)){ acts.push({a:"aprovar",l:"Aprovar",k:"ok"}); acts.push({a:"reprovar",l:"Reprovar",k:"bad"}); }
     if(has(v,"Reprovado")&&a.sub_etapa===6&&can(user,"obra")) acts.push({a:"corrigir",l:"Corrigir",k:"primary"});
     S.push({key:col,col,titulo,status:v,acts,moves:T.filter(t=>t.coluna===col).map(movVist)}); };
-  vist("rep_vistoria_qualidade","Vistoria Qualidade","excelencia");
+  vist("rep_vistoria_qualidade","Vistoria Qualidade","qualidade");
   vist("rep_vistoria_arq","Vistoria Arquitetura","arquitetura");
   if(!blank(a.agendamento)){ const acts=[];
     if(a.agendamento==="Pendente"&&can(user,"rc")) acts.push({a:"agendar",l:"Agendar",k:"info",data:true});
     if(has(a.agendamento,"/")&&has(a.rep_vistoria_sindico,"Pendente")&&can(user,"rc")) acts.push({a:"cancelar",l:"Cancelar agendamento",k:"dark"});
     S.push({key:"agendamento",col:"agendamento",titulo:"Agendamento com Síndico",status:a.agendamento,acts,
       moves:T.filter(t=>t.coluna==="agendamento"||(t.coluna==="rep_vistoria_arq"&&t.acao==="aprovar")).map(t=>t.coluna==="rep_vistoria_arq"?mov(t,"info","liberou o local para agendamento com o síndico."):t.acao==="agendar"?mov(t,"ok",`agendou a vistoria do síndico para ${t.agendamento}.`):mov(t,"neutral","cancelou o agendamento."))}); }
-  vist("rep_vistoria_sindico","Vistoria do Síndico","excelencia");
+  vist("rep_vistoria_sindico","Vistoria do Síndico","qualidade");
   return S;
 }
 

@@ -10,7 +10,7 @@ function passo(msg){ if(S.auth.tela!=="carregando") return; S.auth.passo=msg; co
 
 /* ---------- telas de entrada ---------- */
 function authShell(corpo){
-  return `<div class="auth"><div class="home-top"><div class="wrap"><b>Controle das Unidades | Excelência Operacional</b><b>${VERSAO}</b></div></div>
+  return `<div class="auth"><div class="home-top"><div class="wrap"><b>Controle das Unidades | Excelência Operacional</b><b class="ht-v">${VERSAO}</b></div></div>
     <main class="auth-main"><div class="auth-card">
       <img class="auth-logo" src="${isDark()?LOGOS.branca:LOGOS.preta}" alt="Gestor de Entrega">${corpo}</div></main>
     <div class="rottas-tab" aria-hidden="true"><img src="${LOGOS.rottas}" alt=""></div></div>`;
@@ -138,7 +138,7 @@ function usrDetalhe(){
   const p=usrSel();
   if(!p) return `<section class="panel cli-detail"><div class="empty"><b>Selecione uma pessoa</b><span>Escolha alguém na lista para aprovar o acesso, mudar funções e obras ou redefinir a senha.</span></div></section>`;
   const F=S.usr.form, eu=p.login===REAL_USER, [cls,stl]=STATUS_USR[p.status], sug=usrSugestao(p);
-  const funcoes=PERMS.map(f=>`<button class="fck-row usr-fn" data-act="usrfn" data-v="${f}" aria-pressed="${F.funcoes.includes(f)}"><span class="fck ${F.funcoes.includes(f)?"on":""}">${IC.check}</span><span><b>${esc(PERM_NOME[f])}</b><small class="muted">${esc(PERM_DESC[f]||"")}</small></span></button>`).join("");
+  const funcoes=PERMS.filter(f=>f!=="admin").map(f=>`<button class="fck-row usr-fn" data-act="usrfn" data-v="${f}" aria-pressed="${F.funcoes.includes(f)}"><span class="fck ${F.funcoes.includes(f)?"on":""}">${IC.check}</span><span><b>${esc(PERM_NOME[f])}</b><small class="muted">${esc(PERM_DESC[f]||"")}</small></span></button>`).join("");
   const obras=[...DB.obras].sort((a,b)=>a.ordem-b.ordem).map(o=>`<button class="fck-row" data-act="usrob" data-id="${o.id}" aria-pressed="${F.obras.includes(o.id)}"><span class="fck ${F.obras.includes(o.id)?"on":""}">${IC.check}</span><span>${esc(o.nome)}${o.ativa===false?` <span class="muted small">(inativa)</span>`:""}</span></button>`).join("");
   const adminMarcado=F.funcoes.includes("admin");
   return `<section class="panel cli-detail open usr-detail">

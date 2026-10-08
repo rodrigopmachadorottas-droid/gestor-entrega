@@ -19,8 +19,8 @@ from datetime import datetime, timezone
 PASTA = sys.argv[1] if len(sys.argv) > 1 else "."
 SAIDA = sys.argv[2] if len(sys.argv) > 2 else "."
 TODOS_TESTES = ["esgoto", "aguafria", "dreno", "gas", "eletrico"]
-FUNCOES_OK = {"admin", "obra", "instalacoes", "excelencia", "rc", "financeiro", "arquitetura", "gerente"}
-MAPA_FUNCAO = {"supervisor": "gerente"}
+FUNCOES_OK = {"admin", "obra", "instalacoes", "qualidade", "rc", "financeiro", "arquitetura"}
+MAPA_FUNCAO = {"excelencia": "qualidade", "supervisor": None}   # supervisor deixou de existir
 # regras que no Power Apps eram fixas por ID de obra
 APROVAR_DIRETO = {1}
 VISTORIA_PREVIA = {8}
@@ -132,7 +132,7 @@ for r in obras_sp:
     usados = [t for t in TODOS_TESTES if any(u["rep_teste_" + t] for u in us)]
     testes = usados if usados else TODOS_TESTES[:]          # obra sem dados ainda: todos os testes
     casa = any(l["nivel1"].lower().startswith("quadra") for l in locais if l["id_obra"] == oid)
-    cfg = {"tipo": "casa" if casa else "predio", "testes": testes,
+    cfg = {"tipo": "casa" if casa else "predio", "testes": testes, **({"casasPorLinha": 8} if casa else {}),
            "previa": oid in VISTORIA_PREVIA, "aprovarDireto": oid in APROVAR_DIRETO}
     obras.append({"id": oid, "ordem": num(r["ordem"]) or 0, "nome": r["nome"].strip(), "cidade": (r["cidade"] or "").strip(),
                   "ativa": bool_(r["ativa"]), "config": cfg})
@@ -141,6 +141,15 @@ for r in obras_sp:
     avisos.append(f"Obra {oid} {r['nome'].strip()}: testes {', '.join(testes)}"
                   + (" · casas" if casa else "") + (" · vistoria prévia" if cfg["previa"] else "")
                   + (" · aprovar direto" if cfg["aprovarDireto"] else ""))
+
+# obras de casas: só quadra, sem "pavimentos/fileiras" (a Visão Unidades usa casas por linha)
+obras_casa = {o["id"] for o in obras if o["config"]["tipo"] == "casa"}
+for u in unidades:
+    if u["id_obra"] in obras_casa:
+        u["nivel_2"] = None
+for l in locais:
+    if l["id_obra"] in obras_casa:
+        l["niveis2"] = ""
 
 # ------------------------------------------------------------------ usuários antigos (sugestão de funções)
 funcoes_antigas = []

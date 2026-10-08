@@ -25,8 +25,8 @@ const TESTES = [
   {k:"gas",col:"rep_teste_gas",nome:"Teste Gás"},
   {k:"eletrico",col:"rep_teste_eletrico",nome:"Teste Elétrico"}
 ];
-const PERMS = ["admin","obra","instalacoes","excelencia","rc","financeiro","arquitetura","gerente"];
-const PERM_NOME = {admin:"Admin",obra:"Obra",instalacoes:"Instalações",excelencia:"Excelência",rc:"Relacionamento (RC)",financeiro:"Financeiro",arquitetura:"Arquitetura",gerente:"Gerente"};
+const PERMS = ["admin","obra","instalacoes","qualidade","rc","financeiro","arquitetura"];
+const PERM_NOME = {admin:"Admin",obra:"Obra",instalacoes:"Instalações",qualidade:"Qualidade",rc:"Relacionamento (RC)",financeiro:"Financeiro",arquitetura:"Arquitetura"};
 const HORAS = []; for(let h=7;h<=19;h++){HORAS.push(String(h).padStart(2,"0")+":00"); if(h<19) HORAS.push(String(h).padStart(2,"0")+":30");}
 const DIAS = [["segunda","Segunda-Feira"],["terca","Terça-Feira"],["quarta","Quarta-Feira"],["quinta","Quinta-Feira"],["sexta","Sexta-Feira"],["sabado","Sábado"]];
 const DIA_KEY = {1:"segunda",2:"terca",3:"quarta",4:"quinta",5:"sexta",6:"sabado"}; // getDay()
@@ -51,10 +51,10 @@ function rng(seed){let s=seed>>>0||1; return ()=>{s^=s<<13;s>>>=0;s^=s>>17;s^=s<
 
 /* ================= USUÁRIOS DE TESTE ================= */
 const USUARIOS_SEED = [
-  {login:"rodrigo.machado",nome:"Rodrigo Machado",perms:["admin","obra","instalacoes","excelencia","rc","financeiro","arquitetura"]},
+  {login:"rodrigo.machado",nome:"Rodrigo Machado",perms:["admin","obra","instalacoes","qualidade","rc","financeiro","arquitetura"]},
   {login:"carla.mendes",nome:"Carla Mendes",perms:["obra"]},
   {login:"paulo.ribeiro",nome:"Paulo Ribeiro",perms:["instalacoes"]},
-  {login:"marina.lopes",nome:"Marina Lopes",perms:["excelencia"]},
+  {login:"marina.lopes",nome:"Marina Lopes",perms:["qualidade"]},
   {login:"julia.prado",nome:"Júlia Prado",perms:["rc"]},
   {login:"fabio.nunes",nome:"Fábio Nunes",perms:["financeiro"]},
   {login:"beatriz.alves",nome:"Beatriz Alves",perms:["arquitetura"]}
@@ -74,6 +74,12 @@ const userByLogin = l=>DB.usuarios.find(u=>u.login===l);
 const nomeUsuario = l=>(userByLogin(l)||{}).nome||tituloCase(String(l||"").split("@")[0].replace(/\./g," "));
 const localById = id=>DB.locais.find(l=>l.id===id);
 const clienteById = id=>DB.clientes.find(c=>c.id===id);
+// linhas de um bloco na Visão Unidades: prédio = um pavimento por linha (o de cima primeiro); casas = N casas por linha (config da obra)
+function linhasBloco(ub,cfg){
+  if(cfg.tipo==="casa"){ const s=[...ub].sort((a,b)=>numUnd(a.unidade)-numUnd(b.unidade)), n=Math.max(1,parseInt(cfg.casasPorLinha)||8), r=[]; for(let i=0;i<s.length;i+=n) r.push(s.slice(i,i+n)); return r; }
+  const rows={}; ub.forEach(x=>{ const k=x.nivel_2||0; (rows[k]=rows[k]||[]).push(x); });
+  return Object.keys(rows).map(Number).sort((a,b)=>b-a).map(k=>rows[k].sort((a,b)=>numUnd(a.unidade)-numUnd(b.unidade)));
+}
 function nivel2Nome(u){const l=localById(u.nivel_1); if(!l||!u.nivel_2) return ""; return (l.niveis2.split(", ")[u.nivel_2-1])||"";}
 function nivel1Nome(u){const l=localById(u.nivel_1); return l?l.nivel1:"";}
 

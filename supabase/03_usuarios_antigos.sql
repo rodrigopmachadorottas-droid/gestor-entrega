@@ -49,7 +49,7 @@ begin
     -- o gatilho já criou o perfil; aqui ele vira aprovado com as funções antigas
     update public.perfis
        set status = 'aprovado',
-           funcoes = case when status = 'aprovado' then funcoes else r.funcoes end,   -- admins_iniciais mantém todas
+           funcoes = case when status = 'aprovado' then funcoes else array_remove(r.funcoes,'admin') end,   -- Admin só para admins_iniciais
            aprovado_em = now(), aprovado_por = 'importação SharePoint', trocar_senha = true
      where id = v_id;
     v_criados := v_criados || v_id;

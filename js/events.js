@@ -4,7 +4,7 @@ function trocarUsuario(login){ S.user=login; S.confirmReset=false; resetFiltros(
 function aplicarTema(){ document.documentElement.dataset.theme=S.dark?"dark":"light"; const m=document.querySelector('meta[name="theme-color"]'); if(m) m.content=S.dark?"#212329":"#FF9114"; }
 function aplicarPrefs(p){ p=p||{}; if(p.tema){ S.dark=p.tema==="dark"; aplicarTema(); try{localStorage.setItem("ge-tema",p.tema);}catch(_){} } }
 const TELAS_INICIAIS=[["indicadores","Indicadores"],["unidades","Unidades"],["areas","Áreas Comuns"],["agenda","Agenda"]];
-function telaInicialObra(){ const t=((S.perfil||{}).prefs||{}).tela; if(t==="agenda"&&!can(ME(),"admin","obra","excelencia","rc")) return "indicadores"; return TELAS_INICIAIS.some(x=>x[0]===t)?t:"indicadores"; }
+function telaInicialObra(){ const t=((S.perfil||{}).prefs||{}).tela; if(t==="agenda"&&!can(ME(),"admin","obra","qualidade","rc")) return "indicadores"; return TELAS_INICIAIS.some(x=>x[0]===t)?t:"indicadores"; }
 function bloqueadoPorLote(){ if(S.lote.q.length){ toast("Aviso","Você tem liberações não salvas","Toque em Liberar ou Cancelar antes de sair."); return true; } return false; }
 function entrarObra(id){ S.obraId=id; S.screen=telaInicialObra(); S.nav=false; S.navObras=false; S.popup=null; S.busca=""; S.lote={on:false,q:[]}; S.loc={localId:null,n2:null,modal:null,cfgAberta:false}; S.hor=null; S.agd={mes:new Date(new Date().getFullYear(),new Date().getMonth(),1),dia:startOfDay(new Date()),busca:""}; resetFiltros(); }
 
@@ -85,7 +85,7 @@ document.addEventListener("click",e=>{
     agdhoje(){ const n=new Date(); S.agd.mes=new Date(n.getFullYear(),n.getMonth(),1); S.agd.dia=startOfDay(n); },
     agddia(){ const d=new Date(+el.dataset.t); S.agd.dia=d; if(d.getMonth()!==S.agd.mes.getMonth()) S.agd.mes=new Date(d.getFullYear(),d.getMonth(),1); },
     cfgtoggle(){ S.loc.cfgAberta=!S.loc.cfgAberta; },
-    cfgtipo(){ OBRA().config.tipo=el.dataset.v; saveDB(); },
+    cfgtipo(){ const c=OBRA().config; c.tipo=el.dataset.v; if(c.tipo==="casa"&&!c.casasPorLinha) c.casasPorLinha=8; saveDB(); },
     locsel(){ S.loc.localId=id; S.loc.n2=+el.dataset.n; },
     locac(){ S.loc.localId="ac"; S.locAba="ac"; },
     acnova(){ S.loc.modal={tipo:"ac",id:null}; },
@@ -100,19 +100,27 @@ document.addEventListener("click",e=>{
     locedit(){ S.loc.modal={tipo:"local",id}; },
     locnovo(){ S.loc.modal={tipo:"local",id:null}; },
     undedit(){ S.loc.modal={tipo:"und",id}; },
-    undnova(){ S.loc.modal={tipo:"und",id:null}; },
+    undnova(){ S.loc.modal={tipo:"und",id:null,sug:proximaUnidade()}; },
     locfechar(){ S.loc.modal=null; },
     undsalvar(){ const nome=document.getElementById("und-nome").value.trim().toUpperCase(); if(!nome){ toast("Erro","Informe o nome da unidade"); return; }
       const M=S.loc.modal;
       if(M.id){ DB.unidades.find(u=>u.id===M.id).unidade=nome; }
       else{ if(DB.unidades.some(u=>u.nivel_1===S.loc.localId&&u.unidade===nome)){ toast("Erro","Já existe uma unidade com esse nome neste local"); return; }
-        DB.unidades.push({id:nextId("unidades"),id_obra:S.obraId,nivel_1:S.loc.localId,nivel_2:S.loc.n2,unidade:nome,modulo:"",id_cliente:null,sub_etapa:1,rep_teste_esgoto:"",rep_teste_aguafria:"",rep_teste_dreno:"",rep_teste_gas:"",rep_teste_eletrico:"",rep_vistoria_at:"",rep_vistoria_previa:"",rep_vistoria_cliente:"",agendamento:"",financeiro_status:"",financeiro_motivo:"",prioridade:""}); }
+        DB.unidades.push(novaUnidade(S.loc.localId,OBRA().config.tipo==="casa"?null:S.loc.n2,nome)); }
       saveDB(); S.loc.modal=null; toast("Sucesso","Unidade salva",nome); },
     unddel(){ const M=S.loc.modal; if(!M.del){ M.del=true; return; } DB.unidades=DB.unidades.filter(u=>u.id!==M.id); saveDB(); S.loc.modal=null; toast("Sucesso","Unidade excluída"); },
-    locsalvar(){ const n1=document.getElementById("loc-n1").value.trim(), n2=document.getElementById("loc-n2").value.split(",").map(s=>s.trim()).filter(Boolean).join(", ");
-      if(!n1||!n2){ toast("Erro","Preencha o nome e pelo menos um pavimento"); return; }
-      const M=S.loc.modal; if(M.id){ const l=localById(M.id); l.nivel1=n1; l.niveis2=n2; } else DB.locais.push({id:nextId("locais"),id_obra:S.obraId,nivel1:n1,niveis2:n2});
-      saveDB(); S.loc.modal=null; toast("Sucesso","Local salvo",n1); },
+    locsalvar(){ const M=S.loc.modal, F=M.f, casa=OBRA().config.tipo==="casa", n1=(F.n1||"").trim();
+      if(!n1){ toast("Erro",casa?"Informe o nome da quadra":"Informe o nome do bloco"); return; }
+      let l=M.id?localById(M.id):null;
+      if(DB.locais.some(x=>x.id_obra===S.obraId&&x!==l&&x.nivel1.toLowerCase()===n1.toLowerCase())){ toast("Erro","Já existe um local com esse nome"); return; }
+      let niveis2="";
+      if(!casa){ const pav=Math.max(1,Math.min(40,parseInt(F.pav)||1)), atuais=l&&l.niveis2?l.niveis2.split(", ").filter(Boolean):[];
+        if(l&&DB.unidades.some(u=>u.nivel_1===l.id&&u.nivel_2>pav)){ toast("Erro","Existem unidades nos pavimentos que seriam removidos","Exclua essas unidades antes de diminuir os pavimentos."); return; }
+        niveis2=Array.from({length:pav},(_,i)=>atuais[i]||`${i+1}° Pavimento`).join(", "); }
+      if(l){ l.nivel1=n1; l.niveis2=niveis2; } else { l={id:nextId("locais"),id_obra:S.obraId,nivel1:n1,niveis2}; DB.locais.push(l); }
+      let n=0; if(F.gerar){ planoUnidades(F,l,casa).novas.forEach(x=>{ DB.unidades.push(novaUnidade(l.id,x.pav,x.nome)); n++; }); }
+      saveDB(); S.loc.modal=null; S.loc.localId=l.id; S.loc.n2=casa?0:1; S.locAba="und";
+      toast("Sucesso",casa?"Quadra salva":"Bloco salvo",n?`${n1} · ${n} unidade(s) criada(s)`:n1); },
     locdel(){ const M=S.loc.modal; if(!M.del){ M.del=true; return; } DB.locais=DB.locais.filter(l=>l.id!==M.id); if(S.loc.localId===M.id) S.loc.localId=null; saveDB(); S.loc.modal=null; toast("Sucesso","Local excluído"); },
     cliaba(){ S.cli.aba=el.dataset.v; S.cli.edit=null; },
     clifiltro(){ S.cli.filtro=el.dataset.v; },
@@ -146,6 +154,7 @@ document.addEventListener("input",e=>{
   else if(b==="cliUBusca"){ S.cli.ubusca=t.value; render(); }
   else if(b==="cliQ"){ S.cli.q=t.value; render(); }
   else if(t.dataset.ncli){ S.cli.nform[t.dataset.ncli]= t.dataset.ncli==="telefone"? t.value.replace(/\D/g,"") : t.value; if(t.dataset.ncli==="telefone") t.value=S.cli.nform.telefone; }
+  else if(t.dataset.locf&&t.dataset.locf!=="gerar"&&S.loc.modal&&S.loc.modal.f){ S.loc.modal.f[t.dataset.locf]=t.value; render(); }
   else if(t.dataset.conf&&S.conf){ S.conf[t.dataset.conf]=t.value; }
   else if(t.dataset.cli){ S.cli.form[t.dataset.cli]= t.dataset.cli==="telefone"? t.value.replace(/\D/g,"") : t.value; if(t.dataset.cli==="telefone") t.value=S.cli.form.telefone; }
 });
@@ -163,6 +172,8 @@ document.addEventListener("change",e=>{
   if(t.dataset.indfil){ S.ind.fil[t.dataset.indfil]=t.checked; render(); return; }
   if(t.dataset.ind){ S.ind[t.dataset.ind]=t.value; render(); return; }
   if(t.dataset.cfgteste){ const c=OBRA().config, k=t.dataset.cfgteste; c.testes=t.checked?TESTES.map(x=>x.k).filter(x=>x===k||c.testes.includes(x)):c.testes.filter(x=>x!==k); if(!c.testes.length){ c.testes=[k]; toast("Aviso","A obra precisa de pelo menos um teste"); } saveDB(); render(); return; }
+  if(t.dataset.cfgnum){ OBRA().config[t.dataset.cfgnum]=Math.max(1,Math.min(40,parseInt(t.value)||8)); saveDB(); render(); return; }
+  if(t.dataset.locf==="gerar"&&S.loc.modal&&S.loc.modal.f){ S.loc.modal.f.gerar=t.checked; render(); return; }
   if(t.dataset.cfg){ OBRA().config[t.dataset.cfg]=t.checked; saveDB(); render(); return; }
   if(t.dataset.hor){ const h=S.hor.draft[t.dataset.hor][+t.dataset.i]; h[t.dataset.f]= t.dataset.f==="Pessoas"? Math.max(1,+t.value||1) : t.value; return; }
   if(t.dataset.link){ const x=DB.unidades.find(u=>u.id===+t.dataset.link), m=/#(\d+)\s*$/.exec(t.value);

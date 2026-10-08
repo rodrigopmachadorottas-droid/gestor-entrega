@@ -17,13 +17,11 @@ function gerarPdfUnidades(opcoes = {}){
   const pct = (n, t) => t ? ` (${Math.round(n / t * 100)}%)` : "";
 
   const blocoHTML = b => {
-    const ub = us.filter(x => nivel1Nome(x) === b), rows = {};
-    ub.forEach(x => { (rows[x.nivel_2] = rows[x.nivel_2] || []).push(x); });
-    const ks = Object.keys(rows).map(Number).sort((a, c) => c - a), cols = Math.max(1, ...ks.map(k => rows[k].length));
+    const ub = us.filter(x => nivel1Nome(x) === b), linhas = linhasBloco(ub, obra.config), cols = Math.max(1, ...linhas.map(r => r.length));
     const st = ub.map(x => statusInd(x, op, corr));
-    const tiles = ks.map(k => rows[k].sort((a, c) => numUnd(a.unidade) - numUnd(c.unidade))
+    const tiles = linhas.map(r => r
       .map(x => `<div style="background:${corPdf(statusInd(x, op, corr))}">${esc(x.unidade.replace(/^(AP|CASA) /, ""))}</div>`).join("")
-      + (rows[k].length < cols ? "<span></span>".repeat(cols - rows[k].length) : "")).join("");
+      + (r.length < cols ? "<span></span>".repeat(cols - r.length) : "")).join("");
     return `<div class="pdf-b"><div class="pdf-tiles" style="grid-template-columns:repeat(${cols},40px)">${tiles}</div>
       <h4>${esc(b)} <span>(${ub.length})</span></h4>
       <div class="lg">${leg.map(l => { const n = st.filter(s => s === l).length; return n ? `<span><i style="background:${corPdf(l)}"></i>${esc(l)} ${n}</span>` : ""; }).join("")}</div></div>`;
