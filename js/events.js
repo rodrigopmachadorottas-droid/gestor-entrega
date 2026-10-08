@@ -21,12 +21,12 @@ document.addEventListener("click",e=>{
     simvoltar(){ trocarUsuario(REAL_USER); S.adminPanel=false; },
     menuacoes(){ S.menuAcoes=!S.menuAcoes; },
     trocaobra(){ if(bloqueadoPorLote()) return; entrarObra(id); toast("Sucesso","Obra alterada",OBRA().nome); },
-    ir(){ if(bloqueadoPorLote()) return; S.screen=el.dataset.to; S.nav=false; S.popup=null; S.drawer=false; if(S.screen==="horarios") S.hor=null; },
+    ir(){ if(bloqueadoPorLote()) return; if(el.dataset.to==="clientes"&&!podeCadastrarClientes(ME())) return; S.screen=el.dataset.to; S.nav=false; S.popup=null; S.drawer=false; if(S.screen==="horarios") S.hor=null; },
     tema(){ const v=el.dataset.v; S.dark = v? v==="dark" : !isDark(); aplicarTema(); try{localStorage.setItem("ge-tema",S.dark?"dark":"light");}catch(_){} API.salvarPrefs({tema:S.dark?"dark":"light"}); },
     telaini(){ API.salvarPrefs({tela:el.dataset.v}); toast("Sucesso","Tela inicial salva",TELAS_INICIAIS.find(x=>x[0]===el.dataset.v)[1]); },
     locaba(){ S.locAba=el.dataset.v; if(S.locAba==="ac") S.loc.localId="ac"; else if(S.loc.localId==="ac") S.loc.localId=null; },
     fotodel(){ API.removerMinhaFoto().then(()=>{ toast("Sucesso","Foto removida"); render(); }).catch(err=>toast("Erro","Não foi possível remover a foto",msgErro(err))); },
-    pdfund(){ gerarPdfUnidades(); },
+
     agdinfo(){ S.agdInfo=!S.agdInfo; },
     agdabrir(){ S.popup={tipo:el.dataset.ac?"ac":"und",id}; S.agdInfo=false; },
     engsim(){ S.conf.eng=el.dataset.v==="1"; },
@@ -127,7 +127,7 @@ document.addEventListener("click",e=>{
         if(l&&DB.unidades.some(u=>u.nivel_1===l.id&&u.nivel_2>pav)){ toast("Erro","Existem unidades nos pavimentos que seriam removidos","Exclua essas unidades antes de diminuir os pavimentos."); return; }
         niveis2=Array.from({length:pav},(_,i)=>atuais[i]||`${i+1}° Pavimento`).join(", "); }
       if(l){ l.nivel1=n1; l.niveis2=niveis2; } else { l={id:nextId("locais"),id_obra:S.obraId,nivel1:n1,niveis2}; DB.locais.push(l); }
-      let n=0; if(F.gerar){ planoUnidades(F,l,casa).novas.forEach(x=>{ DB.unidades.push(novaUnidade(l.id,x.pav,x.nome)); n++; }); }
+      let n=0; planoUnidades(F,l,casa).novas.forEach(x=>{ DB.unidades.push(novaUnidade(l.id,x.pav,x.nome)); n++; });
       saveDB(); S.loc.modal=null; S.loc.localId=l.id; S.loc.n2=casa?0:1; S.locAba="und";
       toast("Sucesso",casa?"Quadra salva":"Bloco salvo",n?`${n1} · ${n} unidade(s) criada(s)`:n1); },
     locdel(){ const M=S.loc.modal; if(!M.del){ M.del=true; return; } DB.locais=DB.locais.filter(l=>l.id!==M.id); if(S.loc.localId===M.id) S.loc.localId=null; saveDB(); S.loc.modal=null; toast("Sucesso","Local excluído"); },
@@ -136,19 +136,48 @@ document.addEventListener("click",e=>{
     cliund(){ S.cli.und=id; S.cli.q=""; S.cli.novo=false; },
     cliundfechar(){ S.cli.und=null; },
     clidesv(){ const x=DB.unidades.find(u=>u.id===S.cli.und); x.id_cliente=null; saveDB(); toast("Sucesso","Vínculo removido",x.unidade); },
-    clivinc2(){ const x=DB.unidades.find(u=>u.id===S.cli.und), c=clienteById(+el.dataset.c); x.id_cliente=c.id; S.cli.q=""; saveDB(); toast("Sucesso","Cliente vinculado",`${x.unidade} · ${tituloCase(c.nome)}`); },
+    clivinc2(){ const x=DB.unidades.find(u=>u.id===S.cli.und), c=clienteById(+el.dataset.c); x.id_cliente=c.id; if(c.id_obra==null) c.id_obra=x.id_obra; S.cli.q=""; saveDB(); toast("Sucesso","Cliente vinculado",`${x.unidade} · ${tituloCase(c.nome)}`); },
     clinovotg(){ S.cli.novo=!S.cli.novo; S.cli.nform={nome:S.cli.novo?tituloCase(S.cli.q):"",telefone:"",email:""}; },
     clinovo(){ S.cli.edit="novo"; S.cli.form={nome:"",telefone:"",email:""}; S.cli.del=false; },
     cliedit(){ const c=clienteById(id); S.cli.edit=id; S.cli.form={nome:tituloCase(c.nome),telefone:c.telefone,email:c.email}; S.cli.del=false; },
     clicancel(){ S.cli.edit=null; },
     clidel(){ if(!S.cli.del){ S.cli.del=true; return; } const cid=S.cli.edit; DB.clientes=DB.clientes.filter(c=>c.id!==cid); DB.unidades.forEach(u=>{if(u.id_cliente===cid) u.id_cliente=null;}); saveDB(); S.cli.edit=null; toast("Sucesso","Cliente excluído"); },
     clivinc(){ S.cli.vincular=!S.cli.vincular; },
-    horadd(){ const L=S.hor.draft[el.dataset.k]; L.push({ID:Math.max(0,...L.map(h=>h.ID))+1,Horas:"07:00",Pessoas:1}); },
-    hordel(){ S.hor.draft[el.dataset.k].splice(+el.dataset.i,1); },
+    horaba(){ S.hor.aba=el.dataset.v; S.hor.exc=null; },
+    horcfg(){ carregarHor(+el.dataset.id); S.hor.aba="semana"; },
+    horcfgnova(){ const d=S.hor.novaData; if(!d){ toast("Erro","Escolha a data em que a nova semana começa"); return; }
+      if(DB.horarios.some(h=>h.id_obra===S.obraId&&h.valido_desde===d)){ toast("Erro","Já existe uma configuração começando nessa data"); return; }
+      const D=S.hor.draft, rec={id:nextId("horarios"),id_obra:S.obraId,valido_desde:d}; DIAS.forEach(([k])=>{ rec[k]=JSON.stringify(D[k]); }); DB.horarios.push(rec); saveDB(); carregarHor(rec.id);
+      toast("Sucesso","Nova configuração criada",`Vale a partir de ${fmtData(new Date(d+"T00:00"))}. Ajuste os horários e salve.`); },
+    horcfgdel(){ const H=S.hor; if(!H.delCfg){ H.delCfg=true; return; } DB.horarios=DB.horarios.filter(h=>h.id!==H.cfgId); saveDB(); carregarHor(); toast("Sucesso","Configuração excluída"); },
+    excnova(){ S.hor.exc={id:null,data:"",motivo:"",fechado:true,slots:[]}; },
+    excedit(){ const e=DB.horarios_excecoes.find(z=>z.id===id); S.hor.exc={id:e.id,data:e.data,motivo:e.motivo||"",fechado:!!e.fechado,slots:parseHor(e.horarios)}; },
+    exccancel(){ S.hor.exc=null; },
+    excfechado(){ S.hor.exc.fechado=el.dataset.v==="1"; },
+    excdel(){ const E=S.hor.exc; if(!E.del){ E.del=true; return; } DB.horarios_excecoes=DB.horarios_excecoes.filter(z=>z.id!==E.id); saveDB(); S.hor.exc=null; toast("Sucesso","Exceção excluída"); },
+    excsalvar(){ const E=S.hor.exc; if(!E.data){ toast("Erro","Escolha a data"); return; }
+      if(DB.horarios_excecoes.some(z=>z.id_obra===S.obraId&&z.data===E.data&&z.id!==E.id)){ toast("Erro","Essa data já tem uma exceção","Edite a que já existe."); return; }
+      if(!E.fechado&&new Set(E.slots.map(h=>h.Horas)).size!==E.slots.length){ toast("Erro","Existem horários duplicados"); return; }
+      const dados={data:E.data,motivo:E.motivo.trim(),fechado:E.fechado,horarios:JSON.stringify(E.fechado?[]:[...E.slots].sort((a,b)=>a.Horas.localeCompare(b.Horas)))};
+      if(E.id) Object.assign(DB.horarios_excecoes.find(z=>z.id===E.id),dados); else DB.horarios_excecoes.push({id:nextId("horarios_excecoes"),id_obra:S.obraId,...dados});
+      saveDB(); S.hor.exc=null; toast("Sucesso","Exceção salva",fmtData(new Date(dados.data+"T00:00"))); },
+    pdfcfg(){ abrirPdfCfg(); },
+    pdfcfgfechar(){ S.pdfCfg=null; },
+    pdfetapas(){ const ops=indEtapas(); S.pdfCfg.etapas=S.pdfCfg.etapas.length===ops.length?[]:ops.map(o=>o.id); },
+    pdfgerar(){ gerarPdf(); },
+    impabrir(){ abrirImportar(); },
+    impfechar(){ S.imp=null; },
+    impaba(){ S.imp.aba=el.dataset.v; },
+    impmodelo(){ baixarModeloClientes(); },
+    impok(){ importarClientes(); },
+    impsel(){ const k=+el.dataset.id, L=S.imp.sel; S.imp.sel=L.includes(k)?L.filter(x=>x!==k):[...L,k]; },
+    impselall(){ const todos=clientesDeOutraObra().map(c=>c.id); S.imp.sel=S.imp.sel.length===todos.length?[]:todos; },
+    horadd(){ if(el.dataset.k==="exc"){ const L=S.hor.exc.slots; L.push({ID:Math.max(0,...L.map(h=>h.ID))+1,Horas:"09:00",Pessoas:1}); return; } const L=S.hor.draft[el.dataset.k]; L.push({ID:Math.max(0,...L.map(h=>h.ID))+1,Horas:"07:00",Pessoas:1}); },
+    hordel(){ (el.dataset.k==="exc"?S.hor.exc.slots:S.hor.draft[el.dataset.k]).splice(+el.dataset.i,1); },
     horsalvar(){ const D=S.hor.draft; const dup=DIAS.some(([k])=>new Set(D[k].map(h=>h.Horas)).size!==D[k].length);
       if(dup){ toast("Erro","Existem horários duplicados, corrija"); return; }
-      const rec=DB.horarios.find(h=>h.id_obra===S.obraId)||(DB.horarios.push({id:nextId("horarios"),id_obra:S.obraId}),DB.horarios[DB.horarios.length-1]);
-      DIAS.forEach(([k])=>{ rec[k]=JSON.stringify([...D[k]].sort((a,b)=>a.Horas.localeCompare(b.Horas))); }); saveDB(); S.hor=null; toast("Sucesso","Horários salvos"); }
+      const rec=DB.horarios.find(h=>h.id===S.hor.cfgId)||(DB.horarios.push({id:nextId("horarios"),id_obra:S.obraId,valido_desde:null}),DB.horarios[DB.horarios.length-1]);
+      DIAS.forEach(([k])=>{ rec[k]=JSON.stringify([...D[k]].sort((a,b)=>a.Horas.localeCompare(b.Horas))); }); saveDB(); const cid=rec.id; carregarHor(cid); toast("Sucesso","Horários salvos"); }
   }[act];
   if(run){ e.preventDefault(); run(); render(); }
 });
@@ -163,7 +192,9 @@ document.addEventListener("input",e=>{
   else if(b==="cliUBusca"){ S.cli.ubusca=t.value; render(); }
   else if(b==="cliQ"){ S.cli.q=t.value; render(); }
   else if(t.dataset.ncli){ S.cli.nform[t.dataset.ncli]= t.dataset.ncli==="telefone"? t.value.replace(/\D/g,"") : t.value; if(t.dataset.ncli==="telefone") t.value=S.cli.nform.telefone; }
-  else if(t.dataset.locf&&t.dataset.locf!=="gerar"&&S.loc.modal&&S.loc.modal.f){ S.loc.modal.f[t.dataset.locf]=t.value; render(); }
+  else if(t.dataset.locf&&!["gerar","hall"].includes(t.dataset.locf)&&S.loc.modal&&S.loc.modal.f){ S.loc.modal.f[t.dataset.locf]=t.value; atualizarPrevLocal(); }
+  else if(t.dataset.exc&&S.hor&&S.hor.exc){ S.hor.exc[t.dataset.exc]=t.value; if(t.dataset.exc==="data") render(); }
+  else if(t.id==="hor-nova-data"&&S.hor){ S.hor.novaData=t.value; }
   else if(t.id==="laudo-obs"&&S.laudoRec){ S.laudoRec.obs=t.value; }
   else if(t.dataset.conf&&S.conf){ S.conf[t.dataset.conf]=t.value; }
   else if(t.dataset.cli){ S.cli.form[t.dataset.cli]= t.dataset.cli==="telefone"? t.value.replace(/\D/g,"") : t.value; if(t.dataset.cli==="telefone") t.value=S.cli.form.telefone; }
@@ -184,28 +215,33 @@ document.addEventListener("change",e=>{
   if(t.dataset.ind){ S.ind[t.dataset.ind]=t.value; render(); return; }
   if(t.dataset.cfgteste){ const c=OBRA().config, k=t.dataset.cfgteste; c.testes=t.checked?TESTES.map(x=>x.k).filter(x=>x===k||c.testes.includes(x)):c.testes.filter(x=>x!==k); if(!c.testes.length){ c.testes=[k]; toast("Aviso","A obra precisa de pelo menos um teste"); } saveDB(); render(); return; }
   if(t.dataset.cfgnum){ OBRA().config[t.dataset.cfgnum]=Math.max(1,Math.min(40,parseInt(t.value)||8)); saveDB(); render(); return; }
-  if(t.dataset.locf==="gerar"&&S.loc.modal&&S.loc.modal.f){ S.loc.modal.f.gerar=t.checked; render(); return; }
+  if((t.dataset.locf==="gerar"||t.dataset.locf==="hall")&&S.loc.modal&&S.loc.modal.f){ S.loc.modal.f[t.dataset.locf]=t.checked; render(); return; }
+  if(t.dataset.pdfv&&S.pdfCfg){ S.pdfCfg.visoes[t.dataset.pdfv]=t.checked; render(); return; }
+  if(t.dataset.pdfe&&S.pdfCfg){ const L=S.pdfCfg.etapas, k=t.dataset.pdfe; S.pdfCfg.etapas=t.checked?[...L,k]:L.filter(x=>x!==k); render(); return; }
+  if(t.id==="imp-arq"&&S.imp&&t.files[0]){ lerPlanilha(t.files[0]); t.value=""; return; }
+  if(t.id==="imp-obra"&&S.imp){ S.imp.origem=+t.value||null; S.imp.sel=[]; render(); return; }
   if(t.dataset.cfg){ OBRA().config[t.dataset.cfg]=t.checked; saveDB(); render(); return; }
-  if(t.dataset.hor){ const h=S.hor.draft[t.dataset.hor][+t.dataset.i]; h[t.dataset.f]= t.dataset.f==="Pessoas"? Math.max(1,+t.value||1) : t.value; return; }
+  if(t.dataset.hor==="exc"){ const h=S.hor.exc.slots[+t.dataset.i]; h[t.dataset.f]= t.dataset.f==="Pessoas"? Math.max(1,+t.value||1) : t.value; return; }
+  if(t.dataset.hor){ S.hor.sujo=true; const h=S.hor.draft[t.dataset.hor][+t.dataset.i]; h[t.dataset.f]= t.dataset.f==="Pessoas"? Math.max(1,+t.value||1) : t.value; return; }
   if(t.dataset.link){ const x=DB.unidades.find(u=>u.id===+t.dataset.link), m=/#(\d+)\s*$/.exec(t.value);
     if(!t.value.trim()){ x.id_cliente=null; saveDB(); toast("Sucesso","Cliente removido",x.unidade); return; }
-    if(m&&clienteById(+m[1])){ x.id_cliente=+m[1]; saveDB(); toast("Sucesso","Cliente vinculado",`${x.unidade} · ${tituloCase(clienteById(+m[1]).nome)}`); }
+    if(m&&clienteById(+m[1])){ x.id_cliente=+m[1]; if(clienteById(+m[1]).id_obra==null) clienteById(+m[1]).id_obra=x.id_obra; saveDB(); toast("Sucesso","Cliente vinculado",`${x.unidade} · ${tituloCase(clienteById(+m[1]).nome)}`); }
     else toast("Erro","Escolha um cliente da lista"); return; }
 });
 document.addEventListener("submit",e=>{
   if(e.target.dataset.form==="clinovo"){ e.preventDefault(); const F=S.cli.nform;
     if(!F.nome.trim()){ toast("Erro","Informe o nome do cliente"); return; }
     if(F.telefone&&(F.telefone.length<12||F.telefone.length>13)){ toast("Erro","Telefone incompleto","Use DDI + DDD + número, ex.: 5541995254849"); return; }
-    const c={id:nextId("clientes"),nome:F.nome.trim().toUpperCase(),telefone:F.telefone,email:F.email.trim().toLowerCase()}; DB.clientes.push(c);
+    const c={id:nextId("clientes"),id_obra:S.obraId,nome:F.nome.trim().toUpperCase(),telefone:F.telefone,email:F.email.trim().toLowerCase()}; DB.clientes.push(c);
     const x=DB.unidades.find(u=>u.id===S.cli.und); x.id_cliente=c.id; S.cli.novo=false; S.cli.q=""; saveDB(); toast("Sucesso","Cliente cadastrado e vinculado",`${x.unidade} · ${tituloCase(c.nome)}`); render(); return; }
   if(e.target.dataset.form!=="cli") return; e.preventDefault();
   const F=S.cli.form; if(!F.nome.trim()){ toast("Erro","Informe o nome do cliente"); return; }
   if(F.telefone&&(F.telefone.length<12||F.telefone.length>13)){ toast("Erro","Telefone incompleto","Use DDI + DDD + número, ex.: 5541995254849"); return; }
-  if(S.cli.edit==="novo") DB.clientes.push({id:nextId("clientes"),nome:F.nome.trim().toUpperCase(),telefone:F.telefone,email:F.email.trim().toLowerCase()});
+  if(S.cli.edit==="novo") DB.clientes.push({id:nextId("clientes"),id_obra:S.obraId,nome:F.nome.trim().toUpperCase(),telefone:F.telefone,email:F.email.trim().toLowerCase()});
   else Object.assign(clienteById(S.cli.edit),{nome:F.nome.trim().toUpperCase(),telefone:F.telefone,email:F.email.trim().toLowerCase()});
   saveDB(); S.cli.edit=null; toast("Sucesso","Cliente salvo"); render();
 });
 document.addEventListener("keydown",e=>{ if(e.key!=="Escape") return;
-  if(S.laudoRec) S.laudoRec=null; else if(S.agdInfo) S.agdInfo=false; else if(S.conf) S.conf=null; else if(S.homeInd) S.homeInd=null; else if(S.menuAcoes) S.menuAcoes=false; else if(S.adminPanel) S.adminPanel=false; else if(S.navObras) S.navObras=false; else if(S.ag) S.ag=null; else if(S.popup) S.popup=null; else if(S.loc.modal) S.loc.modal=null; else if(S.popup) S.popup=null; else if(S.drawer) S.drawer=false; else if(S.nav) S.nav=false; else return; render(); });
+  if(S.imp) S.imp=null; else if(S.pdfCfg) S.pdfCfg=null; else if(S.laudoRec) S.laudoRec=null; else if(S.agdInfo) S.agdInfo=false; else if(S.conf) S.conf=null; else if(S.homeInd) S.homeInd=null; else if(S.menuAcoes) S.menuAcoes=false; else if(S.adminPanel) S.adminPanel=false; else if(S.navObras) S.navObras=false; else if(S.ag) S.ag=null; else if(S.popup) S.popup=null; else if(S.loc.modal) S.loc.modal=null; else if(S.popup) S.popup=null; else if(S.drawer) S.drawer=false; else if(S.nav) S.nav=false; else return; render(); });
 
 /* O início do app fica em main.js */

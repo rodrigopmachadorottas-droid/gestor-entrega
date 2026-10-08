@@ -35,9 +35,10 @@ const IC={
   camera:sv('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
   info:sv('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>'),
   pdf:sv('<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
+  upload:sv('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.4";
+const VERSAO="v2.1.5";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -48,7 +49,7 @@ const S={conf:null,homeInd:null,adminPanel:false,simSel:"",menuAcoes:false,user:
 const ME=()=>userByLogin(S.user);
 const OBRA=()=>obraById(S.obraId);
 function filtrosPadrao(u){ return {extras:false,f1:can(u,"admin","obra","instalacoes"),f2:can(u,"admin","obra","qualidade","rc"),f3:can(u,"admin","rc","financeiro"),blocos:[]}; }
-function fasesVisiveis(u){ return {extras:can(u,"admin"),f1:can(u,"admin","obra","instalacoes","qualidade"),f2:can(u,"admin","obra","qualidade","rc"),f3:can(u,"admin","obra","qualidade","rc","financeiro")}; }
+function fasesVisiveis(u){ return {extras:can(u,"admin","lider"),f1:can(u,"admin","obra","instalacoes","qualidade"),f2:can(u,"admin","obra","qualidade","rc"),f3:can(u,"admin","obra","qualidade","rc","financeiro")}; }
 function resetFiltros(){ const u=ME(); S.fil=filtrosPadrao(u); S.ind.fil=filtrosPadrao(u); S.ind.fil.blocos=[]; S.ind.ini=""; S.ind.fim=""; }
 
 function toast(tipo,txt,sub){ const id=Math.random(); S.toasts.push({id,tipo,txt,sub}); if(S.toasts.length>4) S.toasts.shift(); renderToasts(); setTimeout(()=>{S.toasts=S.toasts.filter(t=>t.id!==id); renderToasts();},3800); }
@@ -114,7 +115,7 @@ function podeIndGerais(u){ return obrasDoUsuario(u).length>1&&opcoesGerais(u).le
 function menuLateral(){
   if(!S.nav) return "";
   const u=ME(), it=(id,ic,txt,ok=true)=>ok?`<button class="sb-item ${S.screen===id?"on":""}" data-act="ir" data-to="${id}">${io(id)}${txt}</button>`:"";
-  const cfg=[it("locais","building","Locais",can(u,"admin")),it("clientes","users","Clientes",can(u,"admin")),it("horarios","clock","Horários",can(u,"admin","obra","qualidade"))].join("");
+  const cfg=[it("locais","building","Locais",can(u,"admin")),it("clientes","users","Clientes",podeCadastrarClientes(u)),it("horarios","clock","Horários",can(u,"admin","obra","qualidade"))].join("");
   const obrasAcesso=DB.obras.filter(o=>can(u,"admin")||(", "+o.usuarios+", ").includes(", "+u.login+", "));
   return `<div class="scrim" data-act="navclose"></div><aside class="sidebar" aria-label="Menu">
     <div class="sb-head"><button class="logo-btn" data-act="home" aria-label="Voltar para as obras"><img src="${isDark()?LOGOS.branca:LOGOS.preta}" alt="Gestor de Entrega"></button><button data-act="ir" data-to="versoes">${VERSAO}</button></div>
@@ -237,10 +238,10 @@ function agendaTab(){
   for(let i=0;i<42;i++){ const d=new Date(ini); d.setDate(ini.getDate()+i); if(i>=35&&d.getMonth()!==m.getMonth()) break; dias.push(d); }
   const nv=repN(x.rep_vistoria_cliente)||1;
   let slots="";
-  if(A.dia){ const dk=DIA_KEY[A.dia.getDay()]; const hs=dk?horariosDia(S.obraId,dk):[];
+  if(A.dia){ const ex=excecaoNaData(S.obraId,isoData(A.dia)); const hs=horariosNaData(S.obraId,A.dia);
     slots=hs.length?hs.map(h=>{const oc=ocupacao(S.obraId,fmtData(A.dia)+" "+h.Horas,x.id), cheio=oc>=h.Pessoas, cedo=!admin&&!antecedenciaOk(fmtData(A.dia)+" "+h.Horas);
       return `<button class="${A.hora===h.Horas?"sel":""}" data-act="aghora" data-h="${h.Horas}" ${cheio||cedo?"disabled":""} title="${cedo?"Precisa de 24 horas de antecedência":""}" aria-label="${h.Horas}, ${oc} de ${h.Pessoas} vagas ocupadas">${h.Horas} - ${oc}/${h.Pessoas}</button>`;}).join("")
-      :`<span class="small muted">A obra não tem horários neste dia. Configure em Horários.</span>`; }
+      :`<span class="small muted">${ex&&ex.fechado?`Sem vistorias neste dia${ex.motivo?` (${esc(ex.motivo)})`:""}.`:"A obra não tem horários neste dia. Configure em Horários."}</span>`; }
   else slots=`<span class="small muted">Escolha um dia no calendário.</span>`;
   const finCls=x.financeiro_status==="Liberado"?"ok":x.financeiro_status==="Bloqueado"?"bad":"warn";
   return `<div class="ag">

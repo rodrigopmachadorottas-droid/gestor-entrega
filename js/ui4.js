@@ -2,7 +2,7 @@
 function telaClientes(){
   const C=S.cli;
   const tabs=`<div class="seg tabs" role="tablist"><button class="${C.aba==="vinc"?"on":""}" data-act="cliaba" data-v="vinc" role="tab" aria-selected="${C.aba==="vinc"}">Unidades e clientes</button><button class="${C.aba==="cad"?"on":""}" data-act="cliaba" data-v="cad" role="tab" aria-selected="${C.aba==="cad"}">Cadastro de clientes</button></div>`;
-  return topbar("Clientes")+`<main class="screen">${tabs}${C.aba==="vinc"?cliVinculo():cliCadastro()}</main>`;
+  return topbar("Clientes",`<button class="tb-btn" data-act="impabrir" title="Importar clientes de uma planilha ou de outra obra">${IC.upload}<span>Importar clientes</span></button>`)+`<main class="screen">${tabs}${C.aba==="vinc"?cliVinculo():cliCadastro()}</main>`;
 }
 function cliVinculo(){
   const C=S.cli, todas=ordenarUnidades(unidadesObra()), com=todas.filter(x=>x.id_cliente).length;
@@ -23,7 +23,7 @@ function cliDetalhe(){
   const C=S.cli, x=C.und?DB.unidades.find(u=>u.id===C.und):null;
   if(!x) return `<section class="panel cli-detail"><div class="empty"><b>Selecione uma unidade</b><span>Escolha uma unidade na lista para vincular, trocar ou remover o cliente.</span></div></section>`;
   const c=clienteById(x.id_cliente), q=C.q.trim().toLowerCase(), qd=q.replace(/\D/g,"");
-  const res=q.length>=2?DB.clientes.filter(k=>k.id!==x.id_cliente&&(k.nome.toLowerCase().includes(q)||k.email.includes(q)||(qd.length>=4&&k.telefone.includes(qd)))).sort((a,b)=>a.nome.localeCompare(b.nome)).slice(0,25):[];
+  const res=q.length>=2?clientesObra().filter(k=>k.id!==x.id_cliente&&(k.nome.toLowerCase().includes(q)||k.email.includes(q)||(qd.length>=4&&k.telefone.includes(qd)))).sort((a,b)=>a.nome.localeCompare(b.nome)).slice(0,25):[];
   const outras=k=>DB.unidades.filter(u=>u.id_cliente===k.id&&u.id!==x.id);
   return `<section class="panel cli-detail open">
     <div class="row"><button class="iconbtn only-mobile" data-act="cliundfechar" aria-label="Voltar para a lista">${IC.back}</button><div><div class="muted small">${esc(nivel1Nome(x))}${nivel2Nome(x)?" · "+esc(nivel2Nome(x)):""}</div><h2 class="h2" style="font-size:1.5rem">${esc(x.unidade)}</h2></div><span class="spacer"></span>${pill(ETAPA[x.sub_etapa].n).replace(/s-\w+"/,'s-neutral"')}</div>
@@ -42,11 +42,11 @@ function cliDetalhe(){
 }
 function cliCadastro(){
   const C=S.cli, q=C.busca.trim().toLowerCase();
-  const lista=DB.clientes.filter(c=>!q||(c.nome+" "+c.email+" "+c.telefone).toLowerCase().includes(q)).sort((a,b)=>a.nome.localeCompare(b.nome));
+  const lista=clientesObra().filter(c=>!q||(c.nome+" "+c.email+" "+c.telefone).toLowerCase().includes(q)).sort((a,b)=>a.nome.localeCompare(b.nome));
   const ed=C.edit;
   return `<div class="split cli-cad"><section class="panel"><div class="row" style="margin-bottom:10.8px"><h2 class="h2">Clientes <span class="muted small">(${lista.length})</span></h2><span class="spacer"></span>${buscaBox("cliBusca",C.busca,"Pesquisar cliente").replace('class="search"','class="search in"')}<button class="btn primary" data-act="clinovo">${IC.plus}Novo</button></div>
       <div class="scrollbox" id="cli-lista" data-keep-scroll><table class="list"><thead><tr><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Unidades</th><th></th></tr></thead><tbody>
-      ${lista.slice(0,300).map(c=>{const us=DB.unidades.filter(u=>u.id_cliente===c.id); return `<tr class="${ed===c.id?"sel":""}"><td data-l="Nome"><b>${esc(tituloCase(c.nome))}</b></td><td class="tnum" data-l="Telefone" style="white-space:nowrap">${esc(fmtTel(c.telefone))}</td><td data-l="E-mail">${esc(c.email)}</td><td class="small" data-l="Unidades">${us.length?esc(us.map(u=>(obraById(u.id_obra)||{}).nome+" · "+u.unidade).join(", ")):`<span class="muted">Nenhuma</span>`}</td><td class="cli-ed"><button class="iconbtn" style="width:28.8px;height:28.8px" data-act="cliedit" data-id="${c.id}" aria-label="Editar ${esc(c.nome)}">${IC.edit}</button></td></tr>`;}).join("")}</tbody></table>${lista.length>300?`<p class="small muted">Mostrando 300 de ${lista.length}. Use a busca.</p>`:""}</div></section>
+      ${lista.slice(0,300).map(c=>{const us=DB.unidades.filter(u=>u.id_cliente===c.id); return `<tr class="${ed===c.id?"sel":""}"><td data-l="Nome"><b>${esc(tituloCase(c.nome))}</b></td><td class="tnum" data-l="Telefone" style="white-space:nowrap">${esc(fmtTel(c.telefone))}</td><td data-l="E-mail">${esc(c.email)}</td><td class="small" data-l="Unidades">${us.length?esc(us.map(u=>nivel1Nome(u)+" · "+u.unidade).join(", ")):`<span class="muted">Nenhuma</span>`}</td><td class="cli-ed"><button class="iconbtn" style="width:28.8px;height:28.8px" data-act="cliedit" data-id="${c.id}" aria-label="Editar ${esc(c.nome)}">${IC.edit}</button></td></tr>`;}).join("")}</tbody></table>${lista.length>300?`<p class="small muted">Mostrando 300 de ${lista.length}. Use a busca.</p>`:""}</div></section>
     <section class="panel cli-detail ${ed!=null?"open":""}">${ed!=null?`<div class="row" style="margin-bottom:12.6px"><button class="iconbtn only-mobile" data-act="clicancel" aria-label="Voltar">${IC.back}</button><h2 class="h2">${ed==="novo"?"Novo cliente":"Editar cliente"}</h2></div>
       <form data-form="cli" class="cli-form"><div class="field"><label for="cli-nome">Nome</label><input class="inp" id="cli-nome" data-cli="nome" value="${esc(C.form.nome)}" required></div>
       <div class="field"><label for="cli-tel">Telefone</label><input class="inp tnum" id="cli-tel" data-cli="telefone" value="${esc(C.form.telefone)}" inputmode="numeric" maxlength="13" placeholder="Só números, ex.: 5541995254849"></div>
@@ -56,7 +56,7 @@ function cliCadastro(){
 }
 
 /* ================= TELA: PERFIL ================= */
-const PERM_DESC={admin:"Acesso completo: todas as obras, todas as ações, as configurações e a gestão de usuários.",obra:"Libera testes, corrige pendências, finaliza unidades e cadastra locais e horários.",instalacoes:"Aprova e reprova os testes de esgoto, água fria, dreno, gás e elétrico.",qualidade:"Faz as vistorias Qualidade, Prévia, do Cliente e do Síndico e configura os horários.",rc:"Agenda as vistorias com os clientes e cuida do cadastro de clientes.",financeiro:"Acompanha a fase de Entrega e o status financeiro das unidades.",arquitetura:"Aprova e reprova a vistoria de Arquitetura das áreas comuns."};
+const PERM_DESC={lider:"Liderança da área: vê Informações Extras e Dados por usuário; com RC, cuida do cadastro de clientes.",admin:"Acesso completo: todas as obras, todas as ações, as configurações e a gestão de usuários.",obra:"Libera testes, corrige pendências, finaliza unidades e cadastra locais e horários.",instalacoes:"Aprova e reprova os testes de esgoto, água fria, dreno, gás e elétrico.",qualidade:"Faz as vistorias Qualidade, Prévia, do Cliente e do Síndico e configura os horários.",rc:"Agenda as vistorias com os clientes e cuida do cadastro de clientes.",financeiro:"Acompanha a fase de Entrega e o status financeiro das unidades.",arquitetura:"Aprova e reprova a vistoria de Arquitetura das áreas comuns."};
 function prefsPerfil(u){
   const P=(S.perfil||{}).prefs||{}, tela=telaInicialObra(), ops=TELAS_INICIAIS.filter(([k])=>k!=="agenda"||can(u,"admin","obra","qualidade","rc"));
   return `<section class="panel prefs"><h2 class="h3">Preferências</h2>

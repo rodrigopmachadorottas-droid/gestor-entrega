@@ -19,7 +19,7 @@ O passo a passo completo para colocar no ar está no documento
 | `js/engine.js` | regras do fluxo (etapas, testes, vistorias) |
 | `js/ui*.js`, `js/events.js` | telas e cliques |
 | `js/demo.js` | gerador de dados fictícios do modo demonstração |
-| `js/vendor/supabase.js` | biblioteca supabase-js 2.117.2 (MIT) |
+| `js/vendor/` | bibliotecas: supabase-js 2.117.2, jsPDF 2.5.2 e html2canvas 1.4.1 (PDF), SheetJS 0.18.5 (planilhas) — licenças ao lado |
 | `img/` | logos e fotos das obras |
 | `supabase/01_estrutura.sql` | cria tabelas, regras de acesso e funções (rodar 1x) |
 | `supabase/converter_sharepoint.py` | converte os CSV do SharePoint em SQL de importação |
@@ -27,6 +27,7 @@ O passo a passo completo para colocar no ar está no documento
 | `supabase/04_atualizacao_2.1.2.sql` | fotos (usuário e obra) e preferências — rodar 1x no projeto que já está no ar |
 | `supabase/05_atualizacao_2.1.3.sql` | funções novas (Qualidade no lugar de Excelência, sem Gerente, Admin exclusivo) e casas sem pavimento — rodar 1x depois da 04 |
 | `supabase/06_atualizacao_2.1.4.sql` | laudos de engenheiro e regra das 24 h de antecedência no agendamento — rodar 1x depois da 05 |
+| `supabase/07_atualizacao_2.1.5.sql` | função Líder de área, clientes por obra e exceções de horário — rodar 1x depois da 06 |
 | `supabase/99_zerar_tudo.sql` | apaga tudo para recomeçar (cuidado) |
 
 ## Rodar no computador
@@ -50,9 +51,10 @@ Com `js/config.js` vazio, abre em modo demonstração.
 3. Rode no SQL Editor, nesta ordem: `02_dados_1_cadastros.sql`, `02_dados_2_tarefas_*.sql`, `02_dados_3_final.sql`.
 4. Rode `supabase/03_usuarios_antigos.sql`: cada pessoa do ge_usuarios ganha login aprovado (mesmas funções e obras) com a senha `Rottas@2026`, que o app obriga a trocar no primeiro acesso.
 
-A importação **apaga e regrava** os dados do app (não mexe nos logins). Faça antes de liberar o uso.
+A importação **apaga e regrava** os dados do app (unidades, clientes, tarefas, laudos, horários, exceções, áreas). Mantém logins, funções, acessos às obras e a foto/configuração das obras que já existem. Obras que não estão nos CSV são apagadas. Serve também para **voltar ao estado dos CSV** depois que o app já está em uso.
+Não rode o `03_usuarios_antigos.sql` de novo numa restauração (ele recoloca a senha provisória).
 Os arquivos `02_dados_*.sql` e os CSV têm dados pessoais de clientes: **não suba no GitHub** (o `.gitignore` já bloqueia).
 
 ## Publicar uma nova versão
 
-Altere os arquivos, troque `?v=2.1.4` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
+Altere os arquivos, troque `?v=2.1.5` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.

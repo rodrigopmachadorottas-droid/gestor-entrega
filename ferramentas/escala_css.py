@@ -5,7 +5,7 @@ import os, re
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FATOR = 0.9
 s = open(os.path.join(RAIZ, 'css', 'style.css'), encoding='utf8').read()
-i = s.index('/* PDF */'); j = s.index('@media print{', i); j = s.index('\n}\n', j) + 3   # bloco do PDF fica igual
+i = s.index('/* PDF */'); j = s.index('/* FIM PDF */', i)   # bloco do PDF fica igual
 prot = re.compile(r'\((?:min|max)-(?:width|height):\s*[\d.]+px\)')          # pontos de quebra ficam iguais
 def px(m):
     v = float(m.group(1))

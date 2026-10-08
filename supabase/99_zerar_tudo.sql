@@ -11,7 +11,7 @@ drop policy if exists "anexos enviar" on storage.objects;
 drop policy if exists "fotos obras admin" on storage.objects;
 drop policy if exists "fotos do proprio perfil" on storage.objects;
 drop view if exists public.tarefas_lista, public.perfis_publicos;
-drop table if exists public.laudos, public.tarefas, public.tarefas_ac, public.unidades, public.areas, public.horarios, public.locais,
+drop table if exists public.horarios_excecoes, public.laudos, public.tarefas, public.tarefas_ac, public.unidades, public.areas, public.horarios, public.locais,
   public.obra_acessos, public.clientes, public.obras, public.funcoes_antigas, public.perfis, public.funcoes, public.admins_iniciais cascade;
 drop function if exists public.novo_usuario(), public.eu_aprovado(), public.meu_login(), public.tenho_funcao(text[]), public.sou_admin(),
   public.acesso_obra(bigint), public.pode_acao(text,text,text), public.registrar_acao(text,bigint,text,text,jsonb,jsonb,jsonb),

@@ -1,6 +1,20 @@
 /* ================= MOTOR DE REGRAS (equivalente ao botão oculto "Ação Final") ================= */
-function horariosDia(obraId,dk){
-  const h=DB.horarios.find(x=>x.id_obra===obraId); if(!h) return [];
+const isoData=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseHor=txt=>{ try{ return JSON.parse(txt||"[]").map(x=>({ID:+x.ID,Horas:String(x.Horas),Pessoas:+x.Pessoas})).sort((a,b)=>a.Horas.localeCompare(b.Horas)); }catch(e){ return []; } };
+// configuração semanal que vale numa data: a de "válido desde" mais recente que já começou (sem data = desde sempre)
+function cfgHorarioNaData(obraId,iso){
+  const L=DB.horarios.filter(h=>h.id_obra===obraId&&(!h.valido_desde||h.valido_desde<=iso));
+  return L.sort((a,b)=>String(b.valido_desde||"").localeCompare(String(a.valido_desde||"")))[0]||null;
+}
+const excecaoNaData=(obraId,iso)=>(DB.horarios_excecoes||[]).find(e=>e.id_obra===obraId&&e.data===iso)||null;
+// horários de vistoria num dia: exceção (feriado/dia especial) > semana que está valendo
+function horariosNaData(obraId,d){
+  const iso=isoData(d), ex=excecaoNaData(obraId,iso);
+  if(ex) return ex.fechado?[]:parseHor(ex.horarios);
+  const dk=DIA_KEY[d.getDay()], h=cfgHorarioNaData(obraId,iso); return dk&&h?parseHor(h[dk]):[];
+}
+function horariosDia(obraId,dk,cfgId){
+  const h=cfgId?DB.horarios.find(x=>x.id===cfgId):cfgHorarioNaData(obraId,isoData(new Date())); if(!h) return [];
   try{ return JSON.parse(h[dk]||"[]").map(x=>({ID:+x.ID,Horas:String(x.Horas),Pessoas:+x.Pessoas})).sort((a,b)=>a.Horas.localeCompare(b.Horas)); }catch(e){ return []; }
 }
 function ocupacao(obraId,agStr,exceto){ return DB.unidades.filter(u=>u.id_obra===obraId&&u.agendamento===agStr&&u.id!==exceto).length; }

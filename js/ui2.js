@@ -39,20 +39,20 @@ const corInd=s=>({ok:"var(--ok-s)",bad:"var(--bad-s)",info:"var(--info-s)",warn:
 function unidadesInd(){ const f=S.ind.fil; return unidadesObra().filter(x=>!f.blocos.length||f.blocos.includes(nivel1Nome(x))); }
 function blocosInd(){ const f=S.ind.fil; return blocosObra().filter(b=>!f.blocos.length||f.blocos.includes(b)); }
 function telaIndicadores(){
-  const I=S.ind, ops=indEtapas(); if(!ops.find(o=>o.id===I.etapa)) I.etapa="lib";
+  const I=S.ind, ops=indEtapas(); if(!ops.find(o=>o.id===I.etapa)) I.etapa="lib"; if(I.visao==="Visão Ações"&&!can(ME(),"admin","lider")) I.visao="Visão Unidades";
   const op=ops.find(o=>o.id===I.etapa);
   const nFil=(I.fil.blocos.length?1:0)+(I.ini||I.fim?1:0);
   const comEtapa=I.visao==="Visão Unidades"||I.visao==="Visão Ações";
   const head=`<div class="row indhead">${comEtapa?`<label class="row" style="gap:7.2px"><b>Etapa:</b><select class="inp sf" id="ind-etapa" data-ind="etapa" style="width:auto;min-width:198px">${ops.map(o=>`<option value="${o.id}" ${o.id===I.etapa?"selected":""}>${esc(o.nome)}</option>`).join("")}</select></label>`
       :`<b style="font-size:1.15rem">${I.visao==="Visão Geral"?"Número de unidades por Fase/Etapa":"Número de unidades aprovadas por etapa"}</b>`}
     ${I.visao==="Visão Ações"?`<b>${I.ini||I.fim?`Período: ${I.ini?fmtData(new Date(I.ini+"T00:00")):"início"} até ${I.fim?fmtData(new Date(I.fim+"T00:00")):"hoje"}`:"Todo o período"}</b>`:""}
-    <span class="spacer"></span><select class="inp sf" id="ind-visao" data-ind="visao" style="width:auto">${["Visão Unidades","Visão Geral","Visão Aprovações","Visão Ações"].map(v=>`<option ${v===I.visao?"selected":""}>${v}</option>`).join("")}</select></div>`;
+    <span class="spacer"></span><select class="inp sf" id="ind-visao" data-ind="visao" style="width:auto">${["Visão Unidades","Visão Geral","Visão Aprovações",...(can(ME(),"admin","lider")?["Visão Ações"]:[])].map(v=>`<option ${v===I.visao?"selected":""}>${v}</option>`).join("")}</select></div>`;
   let body="";
   if(I.visao==="Visão Unidades") body=indUnidades(op);
   else if(I.visao==="Visão Geral") body=indGeral();
   else if(I.visao==="Visão Aprovações") body=indAprovacoes();
   else body=indAcoes(op);
-  return topbar(`Indicadores (${OBRA().nome})`,(I.visao==="Visão Unidades"?`<button class="tb-btn" data-act="pdfund" title="Gerar PDF A4 com todos os blocos">${IC.pdf}<span>Gerar PDF</span></button>`:"")+filtroBtn(nFil))+`<main class="screen ${I.visao==="Visão Unidades"?"":"wide"}">${head}${body}</main>`+drawerInd();
+  return topbar(`Indicadores (${OBRA().nome})`,(I.visao==="Visão Unidades"?`<button class="tb-btn" data-act="pdfcfg" title="Gerar PDF dos indicadores">${IC.pdf}<span>Gerar PDF</span></button>`:"")+filtroBtn(nFil))+`<main class="screen ${I.visao==="Visão Unidades"?"":"wide"}">${head}${body}</main>`+drawerInd();
 }
 function corrigidosSet(){ return new Set(DB.tarefas.filter(t=>t.id_obra===S.obraId&&t.acao==="corrigir"&&t.etapa_antiga===7).map(t=>t.id_unidade)); }
 function indUnidades(op){
@@ -126,7 +126,7 @@ function indAcoes(op){
     ${T.length?`<div class="scrollbox" id="ind-mov" data-keep-scroll><table class="list"><thead><tr><th>Unidade</th><th class="n">Ação</th><th>Autor</th><th>Data</th><th>Observação</th></tr></thead><tbody>
       ${lista.map(t=>{const x=um.get(t.id_unidade); return `<tr><td style="white-space:nowrap">${esc(nivel1Nome(x))} - ${esc(x.unidade)}</td><td class="n"><span class="act ${ACAO_CLS[t.acao]||""}">${esc(t.acao)}</span></td><td>${esc(t.autor)}</td><td class="tnum" style="white-space:nowrap">${fmtDTL(new Date(t.data))}</td><td>${esc(t.obs)}</td></tr>`;}).join("")}
       </tbody></table>${T.length>400?`<p class="small muted">Mostrando as 400 mais recentes.</p>`:""}</div>`:`<div class="empty"><b>Nenhuma movimentação</b><span>Mude a etapa ou o período.</span></div>`}</section>
-    <section class="panel"><h2 class="h2" style="margin-bottom:10.8px">Rank de usuários</h2>
+    <section class="panel"><h2 class="h2" style="margin-bottom:10.8px">Dados por usuário</h2>
     <div style="overflow-x:auto"><table class="list"><thead><tr><th>Usuário</th>${rc.map(c=>`<th class="n"><span class="act ${ACAO_CLS[c]}" style="min-width:0">${c}</span></th>`).join("")}<th class="n">Total</th></tr></thead><tbody>
       ${autores.map(r=>`<tr><td>${esc(r.a)}</td>${rc.map(c=>`<td class="n">${T.filter(t=>t.autor===r.a&&t.acao===c).length}</td>`).join("")}<td class="n"><b>${r.n}</b></td></tr>`).join("")}</tbody>
       <tfoot><tr><td></td>${rc.map(c=>{const n=T.filter(t=>t.acao===c).length; return `<td class="n">${n}${T.length&&n?` (${Math.round(n/T.length*100)}%)`:""}</td>`;}).join("")}<td class="n">${T.length}</td></tr></tfoot></table></div></section></div>`;
@@ -268,12 +268,12 @@ function modalLocais(){
     :`<div class="field"><label for="loc-n1">Nome do bloco</label><input class="inp" id="loc-n1" data-locf="n1" value="${esc(F.n1)}" placeholder="Ex.: Bloco H"></div>
       <div class="row2"><div class="field"><label for="loc-pav">Pavimentos</label><input class="inp tnum" type="number" min="1" max="40" id="loc-pav" data-locf="pav" value="${esc(F.pav)}"></div>
       <div class="field"><label for="loc-qt">Unidades por andar</label><input class="inp tnum" type="number" min="0" max="30" id="loc-qt" data-locf="qt" value="${esc(F.qt)}"></div></div>`;
-  const prev=plano.novas.length?`Vai criar <b>${plano.novas.length}</b> unidade(s): ${esc(plano.novas[0].nome)} até ${esc(plano.novas.at(-1).nome)}${plano.existentes?`. ${plano.existentes} já existe(m) e fica(m) como está(ão)`:""}.`
-    :plano.total?"Todas essas unidades já existem.":"Nenhuma unidade para criar.";
+  const prev=textoPlano(plano);
   return `<div class="modal" role="dialog" aria-modal="true"><div class="scrim" data-act="locfechar"></div><div class="box sm"><div class="mhead"><b class="t h2">${l?(casa?"Editar quadra":"Editar bloco"):(casa?"Nova quadra":"Novo bloco")}</b><button class="iconbtn" data-act="locfechar" aria-label="Fechar">${IC.close}</button></div>
     <div class="mbody">${campos}
       <label class="chk"><input type="checkbox" id="loc-gerar" data-locf="gerar" ${F.gerar?"checked":""}>${l?"Criar as unidades que faltam":"Criar as unidades automaticamente"}</label>
-      ${F.gerar?`<div class="loc-prev small">${prev}</div>`:""}
+      ${casa?"":`<label class="chk"><input type="checkbox" id="loc-hall" data-locf="hall" ${F.hall?"checked":""}>Criar um HALL em cada andar</label>`}
+      <div class="loc-prev small" id="loc-prev" ${F.gerar||F.hall?"":"hidden"}>${prev}</div>
       <span class="small muted">${casa?"Padrão de nome: CASA 1, CASA 2... em sequência na obra.":"Padrão de nome: AP + andar + número (1° andar, apto 1 = AP 101; 10° andar = AP 1001)."}</span></div>
     <div class="mfoot">${l&&!temUnd?`<button class="btn ${M.del?"bad":"ghost"}" data-act="locdel">${M.del?"Confirmar exclusão":"Excluir"}</button><span class="spacer"></span>`:""}<button class="btn ghost" data-act="locfechar">Cancelar</button><button class="btn primary" data-act="locsalvar">Salvar</button></div></div></div>`;
 }
@@ -282,13 +282,23 @@ function formLocal(l,casa){
   const us=l?DB.unidades.filter(u=>u.nivel_1===l.id):[];
   if(casa){ const nums=us.map(u=>numCasa(u.unidade)).filter(Boolean), todas=DB.unidades.filter(u=>u.id_obra===S.obraId).map(u=>numCasa(u.unidade)).filter(Boolean);
     return {n1:l?l.nivel1:`Quadra ${DB.locais.filter(x=>x.id_obra===S.obraId).length+1}`, qt:l?us.length:8, ini:l?(nums.length?Math.min(...nums):1):(todas.length?Math.max(...todas)+1:1), gerar:!l}; }
-  const pav=l&&l.niveis2?l.niveis2.split(", ").filter(Boolean).length:4, porAndar={}; us.forEach(u=>{porAndar[u.nivel_2]=(porAndar[u.nivel_2]||0)+1;});
-  return {n1:l?l.nivel1:"", pav, qt:l?Math.max(0,...Object.values(porAndar)):4, gerar:!l};
+  const pav=l&&l.niveis2?l.niveis2.split(", ").filter(Boolean).length:4, porAndar={}; us.filter(u=>!/^HALL/i.test(u.unidade)).forEach(u=>{porAndar[u.nivel_2]=(porAndar[u.nivel_2]||0)+1;});
+  return {n1:l?l.nivel1:"", pav, qt:l?Math.max(0,...Object.values(porAndar)):4, gerar:!l, hall:false};
+}
+function atualizarPrevLocal(){
+  const M=S.loc.modal; if(!M||!M.f) return; const el=document.getElementById("loc-prev"); if(!el) return;
+  const l=M.id?localById(M.id):null; el.innerHTML=textoPlano(planoUnidades(M.f,l,OBRA().config.tipo==="casa"));
+}
+function textoPlano(plano){
+  const aps=plano.novas.filter(x=>!x.hall), halls=plano.novas.filter(x=>x.hall);
+  if(!plano.novas.length) return plano.total?"Todas essas unidades já existem.":"Nenhuma unidade para criar.";
+  return [aps.length?`Vai criar <b>${aps.length}</b> unidade(s): ${esc(aps[0].nome)} até ${esc(aps.at(-1).nome)}`:"",halls.length?`<b>${halls.length}</b> hall(s): ${esc(halls[0].nome)} até ${esc(halls.at(-1).nome)}`:""].filter(Boolean).join(" e ")+(plano.existentes?`. ${plano.existentes} já existe(m) e fica(m) como está(ão)`:"")+".";
 }
 function planoUnidades(F,l,casa){
   const lista=[], qt=Math.max(0,Math.min(casa?300:30,parseInt(F.qt)||0));
-  if(casa){ const ini=Math.max(1,parseInt(F.ini)||1); for(let i=0;i<qt;i++) lista.push({nome:`CASA ${ini+i}`,pav:null}); }
-  else { const pav=Math.max(1,Math.min(40,parseInt(F.pav)||1)); for(let p=1;p<=pav;p++) for(let k=1;k<=qt;k++) lista.push({nome:`AP ${p}${pad(k)}`,pav:p}); }
+  if(casa){ if(F.gerar){ const ini=Math.max(1,parseInt(F.ini)||1); for(let i=0;i<qt;i++) lista.push({nome:`CASA ${ini+i}`,pav:null}); } }
+  else { const pav=Math.max(1,Math.min(40,parseInt(F.pav)||1));
+    for(let p=1;p<=pav;p++){ if(F.gerar) for(let k=1;k<=qt;k++) lista.push({nome:`AP ${p}${pad(k)}`,pav:p}); if(F.hall) lista.push({nome:`HALL ${p}`,pav:p,hall:1}); } }
   const existe=new Set(DB.unidades.filter(u=>casa?u.id_obra===S.obraId:(l&&u.nivel_1===l.id)).map(u=>u.unidade.toUpperCase()));
   const novas=lista.filter(x=>!existe.has(x.nome));
   return {novas,total:lista.length,existentes:lista.length-novas.length};
@@ -302,20 +312,59 @@ function proximaUnidade(){
 
 
 /* ================= TELA: HORÁRIOS ================= */
-function carregarHor(){ S.hor={obraId:S.obraId,draft:Object.fromEntries(DIAS.map(([k])=>[k,horariosDia(S.obraId,k)]))}; }
+function carregarHor(cfgId){
+  const L=DB.horarios.filter(h=>h.id_obra===S.obraId).sort((a,b)=>String(a.valido_desde||"").localeCompare(String(b.valido_desde||"")));
+  const atual=cfgHorarioNaData(S.obraId,isoData(new Date()));
+  const cfg=cfgId?L.find(h=>h.id===cfgId):(atual||L[0]||null);
+  S.hor={obraId:S.obraId,aba:(S.hor&&S.hor.obraId===S.obraId&&S.hor.aba)||"semana",cfgId:cfg?cfg.id:null,draft:Object.fromEntries(DIAS.map(([k])=>[k,cfg?parseHor(cfg[k]):[]])),exc:null,novaData:"",sujo:false};
+}
+const vistoriasNaData=iso=>{ const [y,m,d]=iso.split("-"), br=`${d}/${m}/${y}`; return DB.unidades.filter(u=>u.id_obra===S.obraId&&String(u.agendamento).startsWith(br)&&has(u.rep_vistoria_cliente,"Pendente")); };
+function slotsEditor(L,k){
+  return `${L.map((h,i)=>`<div class="slotrow"><button class="x" data-act="hordel" data-k="${k}" data-i="${i}" aria-label="Remover ${h.Horas}">×</button>
+      <select class="inp" data-hor="${k}" data-i="${i}" data-f="Horas" aria-label="Horário">${HORAS.map(x=>`<option ${x===h.Horas?"selected":""}>${x}</option>`).join("")}</select>
+      <input class="inp tnum" type="number" min="1" max="50" data-hor="${k}" data-i="${i}" data-f="Pessoas" value="${h.Pessoas}" aria-label="Pessoas disponíveis"></div>`).join("")}
+      <button class="btn primary" data-act="horadd" data-k="${k}">Novo horário</button>`;
+}
 function telaHorarios(){
   if(!S.hor||S.hor.obraId!==S.obraId) carregarHor();
-  const D=S.hor.draft;
-  return topbar("Horários",`<button class="btn" data-act="horsalvar" style="background:var(--surface)">Salvar alterações</button>`)+`<main class="screen"><p class="muted small" style="margin:0">Horários em que o RC pode marcar vistoria com o cliente nesta obra, e quantos engenheiros atendem em cada um.</p><div class="days panel">
-    ${DIAS.map(([k,n])=>`<div class="day"><h3>${n}</h3>${D[k].map((h,i)=>`<div class="slotrow"><button class="x" data-act="hordel" data-k="${k}" data-i="${i}" aria-label="Remover ${h.Horas}">×</button>
-      <select class="inp" id="h-${k}-${i}" data-hor="${k}" data-i="${i}" data-f="Horas" aria-label="Horário">${HORAS.map(x=>`<option ${x===h.Horas?"selected":""}>${x}</option>`).join("")}</select>
-      <input class="inp tnum" type="number" min="1" max="50" id="p-${k}-${i}" data-hor="${k}" data-i="${i}" data-f="Pessoas" value="${h.Pessoas}" aria-label="Pessoas disponíveis"></div>`).join("")}
-      <button class="btn primary" data-act="horadd" data-k="${k}">Novo horário</button></div>`).join("")}</div></main>`;
+  const H=S.hor, D=H.draft, hoje=isoData(new Date());
+  const cfgs=DB.horarios.filter(h=>h.id_obra===S.obraId).sort((a,b)=>String(a.valido_desde||"").localeCompare(String(b.valido_desde||"")));
+  const atual=cfgHorarioNaData(S.obraId,hoje);
+  const exc=(DB.horarios_excecoes||[]).filter(e=>e.id_obra===S.obraId).sort((a,b)=>a.data.localeCompare(b.data));
+  const nomeCfg=h=>h.valido_desde?`A partir de ${fmtData(new Date(h.valido_desde+"T00:00"))}`:"Padrão (desde o início)";
+  const tabs=`<div class="seg tabs" role="tablist"><button class="${H.aba==="semana"?"on":""}" data-act="horaba" data-v="semana">Semana padrão</button><button class="${H.aba==="exc"?"on":""}" data-act="horaba" data-v="exc">Exceções e feriados (${exc.filter(e=>e.data>=hoje).length})</button></div>`;
+  let corpo="";
+  if(H.aba==="semana"){
+    const sel=cfgs.find(h=>h.id===H.cfgId);
+    corpo=`<section class="panel" style="display:flex;flex-direction:column;gap:12px"><div class="hor-cfgs"><b>Configuração:</b>${cfgs.map(h=>`<button class="chip ${h.id===H.cfgId?"on":""}" data-act="horcfg" data-id="${h.id}">${nomeCfg(h)}${h===atual?" · valendo hoje":""}</button>`).join("")||`<span class="muted small">Nenhuma ainda (salve para criar a padrão)</span>`}</div>
+      <div class="hor-novo"><span class="small muted">Programar uma semana diferente a partir de uma data (ex.: horário de dezembro):</span><input type="date" class="inp" id="hor-nova-data" value="${esc(H.novaData)}" min="${hoje}" style="width:auto"><button class="btn sm ghost" data-act="horcfgnova">Criar a partir desta data</button>
+      ${sel&&sel.valido_desde?`<span class="spacer"></span><button class="btn sm ${H.delCfg?"bad":"ghost"}" data-act="horcfgdel">${H.delCfg?"Confirmar exclusão":"Excluir esta configuração"}</button>`:""}</div>
+      ${sel&&sel.valido_desde?`<span class="small muted">Esta semana vale de ${fmtData(new Date(sel.valido_desde+"T00:00"))} em diante, até começar outra configuração. Antes disso vale a anterior.</span>`:""}</section>
+      <div class="days panel">${DIAS.map(([k,n])=>`<div class="day"><h3>${n}</h3>${slotsEditor(D[k],k)}</div>`).join("")}</div>`;
+  } else {
+    const E=H.exc;
+    const lista=exc.map(e=>{ const n=vistoriasNaData(e.data).length;
+      return `<div class="exc ${e.data<hoje?"passada":""}"><span class="d">${fmtData(new Date(e.data+"T00:00"))}</span><span>${e.fechado?`<span class="pill s-bad">Sem vistorias</span>`:`<span class="pill s-info">${parseHor(e.horarios).map(h=>h.Horas).join(", ")||"sem horários"}</span>`}</span>
+        <span class="muted">${esc(e.motivo||"")}</span>${n?`<span class="small t-bad">${n} vistoria(s) marcada(s) nesse dia</span>`:""}<span class="spacer"></span>
+        <button class="iconbtn" data-act="excedit" data-id="${e.id}" aria-label="Editar">${IC.edit}</button></div>`; }).join("");
+    let form="";
+    if(E){ const n=E.data?vistoriasNaData(E.data).length:0;
+      form=`<section class="panel" style="display:flex;flex-direction:column;gap:12px"><h2 class="h3" style="margin:0">${E.id?"Editar exceção":"Nova exceção"}</h2>
+        <div class="row2"><div class="field"><label for="exc-data">Data</label><input type="date" class="inp" id="exc-data" data-exc="data" value="${esc(E.data)}"></div>
+        <div class="field"><label for="exc-mot">Motivo</label><input class="inp" id="exc-mot" data-exc="motivo" value="${esc(E.motivo)}" placeholder="Ex.: Feriado de Natal"></div></div>
+        <div class="seg" style="align-self:flex-start"><button class="${E.fechado?"on":""}" data-act="excfechado" data-v="1">Sem vistorias (feriado)</button><button class="${E.fechado?"":"on"}" data-act="excfechado" data-v="0">Horários diferentes</button></div>
+        ${E.fechado?"":`<div class="day" style="min-height:0;border:0;padding:0">${slotsEditor(E.slots,"exc")}</div>`}
+        ${n?`<div class="aviso-box">Já existem <b>${n}</b> vistoria(s) marcada(s) nesse dia. Elas não são canceladas automaticamente: o RC precisa remarcar ou cancelar.</div>`:""}
+        <div class="row">${E.id?`<button class="btn ${E.del?"bad":"ghost"}" data-act="excdel">${E.del?"Confirmar exclusão":"Excluir"}</button>`:""}<span class="spacer"></span><button class="btn ghost" data-act="exccancel">Cancelar</button><button class="btn primary" data-act="excsalvar">Salvar exceção</button></div></section>`; }
+    corpo=`${form}<section class="panel" style="display:flex;flex-direction:column;gap:12px"><div class="row"><span class="small muted">Dias que fogem da semana padrão: feriados, ponte, plantão no sábado... A exceção vale só para aquela data.</span><span class="spacer"></span>${E?"":`<button class="btn primary sm" data-act="excnova">${IC.plus}Nova exceção</button>`}</div>
+      <div class="exc-list">${lista||`<div class="empty" style="padding:30px"><b>Nenhuma exceção cadastrada</b></div>`}</div></section>`;
+  }
+  return topbar("Horários",H.aba==="semana"?`<button class="btn" data-act="horsalvar" style="background:var(--surface)">Salvar alterações</button>`:"")+`<main class="screen"><p class="muted small" style="margin:0">Horários em que o RC pode marcar vistoria com o cliente nesta obra, e quantos engenheiros atendem em cada um.</p>${tabs}${corpo}</main>`;
 }
 
 /* ================= TELA: VERSÕES ================= */
 function telaVersoes(){
-  const V=[["v2.1.4 (08/10/2026)",["Tudo 10% menor (como o zoom de 90% do navegador).","Indicadores Gerais (status atual) para quem tem mais de uma obra, só com as etapas das fases de cada perfil.","Unidades: margens fixas ao rolar a tabela, coluna Quadra corrigida, busca A101 e Informações Extras só para admin (desmarcado).","Áreas Comuns some do menu quando a obra não tem nenhuma.","Gerar PDF no cabeçalho dos Indicadores.","Agenda: legenda no ícone de informação, cor no número da vistoria e card abre a unidade; agendamento só com 24 horas de antecedência.","Vistoria do cliente registra se veio engenheiro; laudos pendentes na tela Laudos."]],["v2.1.3 (08/10/2026)",["Funções: Excelência virou Qualidade e a função Gerente saiu; Admin é só do Rodrigo.","Indicadores gerais abrem por um ícone na tela inicial.","Visão Unidades quebra os blocos em linhas (rolagem vertical) e reparte a largura da tela entre os blocos de cada linha.","Obras de casas: só quadras, com N casas por linha (configuração da obra).","Locais: cria bloco com pavimentos e unidades por andar (AP 101...) e quadra com casas em sequência (CASA 1...).","Celular: cabeçalho da tela inicial em uma linha, Horários e Cadastro de clientes ajustados."]],["v2.1.2 (07/10/2026)",["Ícone do app para instalar no celular e ícone redondo na aba do navegador.","Configurações Admin (logo da tela inicial): simular acesso e gerenciar usuários.","Sair pelo ícone ao lado do seu nome no menu; foto do usuário e cores nas iniciais.","Preferências no perfil: tela inicial da obra e tema (claro é o padrão).","Locais, Clientes e Usuários só para admin; Locais com abas Unidades e Áreas comuns.","Foto de capa da obra na configuração.","Agenda: cor da vistoria pelo resultado (agendada, aprovada, reprovada).","Indicadores gerais redesenhados e PDF A4 da Visão Unidades.","Atualização em segundo plano sem a tela de Sincronizando; nova tela de abertura."]],["v2.1.1 (05/10/2026)",["Usuários do app antigo já entram cadastrados e aprovados, com as mesmas funções e obras.","Senha provisória obriga a criar uma senha própria no primeiro login."]],["v2.1.0 (05/10/2026)",["Versão web em produção: Vercel + Supabase, com os dados importados do SharePoint.","Login com e-mail e senha; novos acessos ficam pendentes até o admin aprovar.","Tela Usuários (admin): aprovar, escolher funções e obras, bloquear e definir senha provisória.","Função Gerente (antigo \"supervisor\"): vê os indicadores gerais na tela inicial.","Anexos guardados de verdade (teste de gás) e assinatura do cliente carregada sob demanda.","Ações conferidas no servidor: permissão por função e aviso quando outra pessoa mexeu antes."]],["v2.0.4 (05/10/2026)",["Cadastro de áreas comuns na tela de Locais."]],["v2.0.3 (05/10/2026)",["Painel de filtros no design do app original."]],["v2.0.2 (05/10/2026)",["Tela de Locais no layout do app original; configuração da obra em botão no cabeçalho.","Modo escuro mantém o cabeçalho laranja e o fundo desfocado do menu.","Novas cores do cabeçalho das etapas e da tabela de unidades."]],["v2.0.1 (05/10/2026)",["Tela de perfil com acessos, obras e tarefas feitas.","Nova tela de clientes: vínculo por unidade com busca de cliente e cadastro rápido.","Checklist também na reprova da Qualidade e na Vistoria do Cliente, com assinatura do cliente.","Anexos só na aprovação do teste de Gás.","Popup mantém a rolagem depois de uma ação; botões alinhados à direita; linha do tempo nas movimentações.","Ajustes para celular e proporções das telas."]],["v2.0.0 (05/10/2026)",["Botões de ação abrem uma confirmação com observação e anexos. Reprova de teste pede o motivo e a aprovação da Qualidade pede o checklist.","Agendamento abre como uma aba do próprio popup da unidade.","Indicadores gerais de todas as obras na tela inicial (admin).","Ícones originais no menu, linhas verticais nas tabelas e ajustes de rolagem."]],["v2.0 · protótipo web (05/10/2026)",["Recriação do app como site, com os mesmos fluxos e telas.","Regras por obra viraram configuração: testes ativos, Vistoria Prévia e Aprovar direto.","Correções: cores e contagens de Gás, Dreno e Vistoria Prévia nos indicadores; Visão Aprovações inclui Gás e Prévia.","Liberação em lote passa a registrar as tarefas no histórico.","Horário cheio fica bloqueado no agendamento; cancelar agendamento mantém o número da vistoria.","Agenda com busca funcionando e vistorias das áreas comuns."]],
+  const V=[["v2.1.5 (09/10/2026)",["Criação de blocos: corrigido o número de unidades por andar e opção de HALL em cada andar.","Clientes por obra e importação de planilha (Excel/CSV) ou de outra obra.","Horários com exceções (feriados, dias especiais) e semanas programadas por data.","PDF dos indicadores baixado direto, com escolha de visões e etapas.","Função Líder de área: Informações Extras, Visão Ações e (com RC) cadastro de clientes.","Nova tela de abertura e cards de obras bloqueadas com fundo."]],["v2.1.4 (08/10/2026)",["Tudo 10% menor (como o zoom de 90% do navegador).","Indicadores Gerais (status atual) para quem tem mais de uma obra, só com as etapas das fases de cada perfil.","Unidades: margens fixas ao rolar a tabela, coluna Quadra corrigida, busca A101 e Informações Extras só para admin (desmarcado).","Áreas Comuns some do menu quando a obra não tem nenhuma.","Gerar PDF no cabeçalho dos Indicadores.","Agenda: legenda no ícone de informação, cor no número da vistoria e card abre a unidade; agendamento só com 24 horas de antecedência.","Vistoria do cliente registra se veio engenheiro; laudos pendentes na tela Laudos."]],["v2.1.3 (08/10/2026)",["Funções: Excelência virou Qualidade e a função Gerente saiu; Admin é só do Rodrigo.","Indicadores gerais abrem por um ícone na tela inicial.","Visão Unidades quebra os blocos em linhas (rolagem vertical) e reparte a largura da tela entre os blocos de cada linha.","Obras de casas: só quadras, com N casas por linha (configuração da obra).","Locais: cria bloco com pavimentos e unidades por andar (AP 101...) e quadra com casas em sequência (CASA 1...).","Celular: cabeçalho da tela inicial em uma linha, Horários e Cadastro de clientes ajustados."]],["v2.1.2 (07/10/2026)",["Ícone do app para instalar no celular e ícone redondo na aba do navegador.","Configurações Admin (logo da tela inicial): simular acesso e gerenciar usuários.","Sair pelo ícone ao lado do seu nome no menu; foto do usuário e cores nas iniciais.","Preferências no perfil: tela inicial da obra e tema (claro é o padrão).","Locais, Clientes e Usuários só para admin; Locais com abas Unidades e Áreas comuns.","Foto de capa da obra na configuração.","Agenda: cor da vistoria pelo resultado (agendada, aprovada, reprovada).","Indicadores gerais redesenhados e PDF A4 da Visão Unidades.","Atualização em segundo plano sem a tela de Sincronizando; nova tela de abertura."]],["v2.1.1 (05/10/2026)",["Usuários do app antigo já entram cadastrados e aprovados, com as mesmas funções e obras.","Senha provisória obriga a criar uma senha própria no primeiro login."]],["v2.1.0 (05/10/2026)",["Versão web em produção: Vercel + Supabase, com os dados importados do SharePoint.","Login com e-mail e senha; novos acessos ficam pendentes até o admin aprovar.","Tela Usuários (admin): aprovar, escolher funções e obras, bloquear e definir senha provisória.","Função Gerente (antigo \"supervisor\"): vê os indicadores gerais na tela inicial.","Anexos guardados de verdade (teste de gás) e assinatura do cliente carregada sob demanda.","Ações conferidas no servidor: permissão por função e aviso quando outra pessoa mexeu antes."]],["v2.0.4 (05/10/2026)",["Cadastro de áreas comuns na tela de Locais."]],["v2.0.3 (05/10/2026)",["Painel de filtros no design do app original."]],["v2.0.2 (05/10/2026)",["Tela de Locais no layout do app original; configuração da obra em botão no cabeçalho.","Modo escuro mantém o cabeçalho laranja e o fundo desfocado do menu.","Novas cores do cabeçalho das etapas e da tabela de unidades."]],["v2.0.1 (05/10/2026)",["Tela de perfil com acessos, obras e tarefas feitas.","Nova tela de clientes: vínculo por unidade com busca de cliente e cadastro rápido.","Checklist também na reprova da Qualidade e na Vistoria do Cliente, com assinatura do cliente.","Anexos só na aprovação do teste de Gás.","Popup mantém a rolagem depois de uma ação; botões alinhados à direita; linha do tempo nas movimentações.","Ajustes para celular e proporções das telas."]],["v2.0.0 (05/10/2026)",["Botões de ação abrem uma confirmação com observação e anexos. Reprova de teste pede o motivo e a aprovação da Qualidade pede o checklist.","Agendamento abre como uma aba do próprio popup da unidade.","Indicadores gerais de todas as obras na tela inicial (admin).","Ícones originais no menu, linhas verticais nas tabelas e ajustes de rolagem."]],["v2.0 · protótipo web (05/10/2026)",["Recriação do app como site, com os mesmos fluxos e telas.","Regras por obra viraram configuração: testes ativos, Vistoria Prévia e Aprovar direto.","Correções: cores e contagens de Gás, Dreno e Vistoria Prévia nos indicadores; Visão Aprovações inclui Gás e Prévia.","Liberação em lote passa a registrar as tarefas no histórico.","Horário cheio fica bloqueado no agendamento; cancelar agendamento mantém o número da vistoria.","Agenda com busca funcionando e vistorias das áreas comuns."]],
     ["v1.1.0 (12/02/2025)",["Indicadores"]],["v1.0.0 (18/11/2025)",["Versão inicial!","Criação do banco de dados","Criação do logo","Tela Home, seletor de obras"]]];
   return topbar("Versões")+`<main class="screen"><section class="panel" style="max-width:684px">${V.map(([t,l])=>`<h2 class="h3" style="margin:5.4px 0">${esc(t)}</h2><ul style="margin:0 0 16.2px;padding-left:18px">${l.map(i=>`<li>${esc(i)}</li>`).join("")}</ul>`).join("")}</section></main>`;
 }
@@ -336,6 +385,8 @@ function render(){
     if(S.popup&&S.popup.tipo==="ac") h+=popupArea();
     if(S.conf) h+=confirmDialog();
     if(S.laudoRec) h+=modalLaudo();
+    if(S.pdfCfg) h+=popupPdfCfg();
+    if(S.imp) h+=popupImportar();
     h+=menuLateral();
   }
   if(!S.auth.tela) h+=extrasAuth();

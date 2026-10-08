@@ -88,11 +88,11 @@ def lista(v):
     return [x.strip() for x in (v or "").split(",") if x.strip()]
 
 
-def inserts(tabela, colunas, linhas, lote=200):
+def inserts(tabela, colunas, linhas, lote=200, fim=""):
     out = []
     for i in range(0, len(linhas), lote):
         vals = ",\n".join("(" + ",".join(q(r[c]) for c in colunas) + ")" for r in linhas[i:i + lote])
-        out.append(f"insert into public.{tabela} ({','.join(colunas)}) values\n{vals};")
+        out.append(f"insert into public.{tabela} ({','.join(colunas)}) values\n{vals}{fim};")
     return "\n".join(out)
 
 
@@ -244,17 +244,42 @@ for u in unidades:
         avisos.append(f"Unidade {u['id']} aponta para cliente {u['id_cliente']} inexistente: vínculo removido")
         u["id_cliente"] = None
 
+# clientes por obra (v2.1.5): fica na obra da unidade; em mais de uma obra ganha uma cópia por obra extra
+prox = max([c["id"] for c in clientes] + [0]) + 1
+por_id = {c["id"]: c for c in clientes}
+for c in clientes:
+    c["id_obra"] = None
+for u in sorted(unidades, key=lambda u: (u["id_obra"], u["id"])):
+    c = por_id.get(u["id_cliente"])
+    if c is None:
+        continue
+    if c["id_obra"] is None:
+        c["id_obra"] = u["id_obra"]
+    elif c["id_obra"] != u["id_obra"]:
+        copia = next((x for x in clientes if x.get("copia_de") == c["id"] and x["id_obra"] == u["id_obra"]), None)
+        if copia is None:
+            copia = {**c, "id": prox, "id_obra": u["id_obra"], "copia_de": c["id"]}
+            prox += 1
+            clientes.append(copia)
+            avisos.append(f"Cliente {c['id']} ({c['nome']}) está em mais de uma obra: cópia {copia['id']} criada")
+        u["id_cliente"] = copia["id"]
+
 # ------------------------------------------------------------------ escrita
 os.makedirs(SAIDA, exist_ok=True)
 CAB = "-- Gerado por converter_sharepoint.py em " + datetime.now().strftime("%d/%m/%Y %H:%M") + "\n-- CONTÉM DADOS PESSOAIS DE CLIENTES. Não publique este arquivo.\n"
 
-p1 = [CAB, "-- PARTE 1/3 · apaga os dados do app (não mexe nos logins) e grava os cadastros", "begin;",
-      "truncate public.tarefas, public.tarefas_ac, public.unidades, public.areas, public.horarios, public.locais,",
-      "         public.obra_acessos, public.obras, public.clientes, public.funcoes_antigas restart identity cascade;",
-      inserts("obras", ["id", "ordem", "nome", "cidade", "ativa", "config"], obras),
-      inserts("obra_acessos", ["obra_id", "login"], acessos),
-      "insert into public.funcoes_antigas (login, funcoes) values\n" + ",\n".join(f"({q(f['login'])},{arr(f['funcoes'])})" for f in funcoes_antigas) + ";" if funcoes_antigas else "",
-      inserts("clientes", ["id", "nome", "email", "telefone", "criado_por"], clientes),
+ids_obras = ",".join(str(o["id"]) for o in obras)
+p1 = [CAB, "-- PARTE 1/3 · apaga os dados do app e grava os da planilha.",
+      "-- Mantém: logins, funções, acesso às obras, foto e configurações das obras que já existem.",
+      "-- Obras que não estão na planilha são APAGADAS (com tudo o que é delas).", "begin;",
+      "truncate public.laudos, public.tarefas, public.tarefas_ac, public.unidades, public.areas, public.horarios_excecoes,",
+      "         public.horarios, public.locais, public.clientes restart identity cascade;",
+      f"delete from public.obras where id not in ({ids_obras});",
+      inserts("obras", ["id", "ordem", "nome", "cidade", "ativa", "config"], obras, fim="\non conflict (id) do nothing"),
+      inserts("obra_acessos", ["obra_id", "login"], acessos, fim="\non conflict do nothing") if acessos else "",
+      ("insert into public.funcoes_antigas (login, funcoes) values\n" + ",\n".join(f"({q(f['login'])},{arr(f['funcoes'])})" for f in funcoes_antigas)
+       + "\non conflict (login) do nothing;") if funcoes_antigas else "",
+      inserts("clientes", ["id", "id_obra", "nome", "email", "telefone", "criado_por"], clientes),
       inserts("locais", ["id", "id_obra", "nivel1", "niveis2"], locais),
       inserts("horarios", ["id", "id_obra", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"], horarios),
       inserts("unidades", ["id", "id_obra", "nivel_1", "nivel_2", "unidade", "modulo", "id_cliente", "sub_etapa",
@@ -274,7 +299,7 @@ for i, parte in enumerate(partes, 1):
                                                          inserts("tarefas", COLS_T, parte) if parte else "", "commit;"])
 
 seqs = "\n".join(f"select setval(pg_get_serial_sequence('public.{t}','id'), greatest((select max(id) from public.{t}), 1));"
-                 for t in ["obras", "clientes", "locais", "horarios", "unidades", "areas", "tarefas", "tarefas_ac"])
+                 for t in ["obras", "clientes", "locais", "horarios", "unidades", "areas", "tarefas", "tarefas_ac", "laudos", "horarios_excecoes"])
 conf = """select 'obras' tabela, count(*) from public.obras union all select 'clientes', count(*) from public.clientes
 union all select 'locais', count(*) from public.locais union all select 'horarios', count(*) from public.horarios
 union all select 'unidades', count(*) from public.unidades union all select 'areas', count(*) from public.areas

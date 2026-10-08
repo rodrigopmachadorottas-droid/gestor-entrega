@@ -25,8 +25,8 @@ const TESTES = [
   {k:"gas",col:"rep_teste_gas",nome:"Teste Gás"},
   {k:"eletrico",col:"rep_teste_eletrico",nome:"Teste Elétrico"}
 ];
-const PERMS = ["admin","obra","instalacoes","qualidade","rc","financeiro","arquitetura"];
-const PERM_NOME = {admin:"Admin",obra:"Obra",instalacoes:"Instalações",qualidade:"Qualidade",rc:"Relacionamento (RC)",financeiro:"Financeiro",arquitetura:"Arquitetura"};
+const PERMS = ["admin","lider","obra","instalacoes","qualidade","rc","financeiro","arquitetura"];
+const PERM_NOME = {admin:"Admin",obra:"Obra",instalacoes:"Instalações",qualidade:"Qualidade",rc:"Relacionamento (RC)",financeiro:"Financeiro",arquitetura:"Arquitetura",lider:"Líder de área"};
 const HORAS = []; for(let h=7;h<=19;h++){HORAS.push(String(h).padStart(2,"0")+":00"); if(h<19) HORAS.push(String(h).padStart(2,"0")+":30");}
 const DIAS = [["segunda","Segunda-Feira"],["terca","Terça-Feira"],["quarta","Quarta-Feira"],["quinta","Quinta-Feira"],["sexta","Sexta-Feira"],["sabado","Sábado"]];
 const DIA_KEY = {1:"segunda",2:"terca",3:"quarta",4:"quinta",5:"sexta",6:"sabado"}; // getDay()
@@ -65,7 +65,7 @@ const STORE_KEY="ge-demo-v1";
 let DB=null;
 function salvarLocal(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }catch(e){} }
 function carregarLocal(){
-  try{ const raw=localStorage.getItem(STORE_KEY); if(raw){ const d=JSON.parse(raw); if(d&&d.v===1){DB=d; DB.laudos=DB.laudos||[]; return;} } }catch(e){}
+  try{ const raw=localStorage.getItem(STORE_KEY); if(raw){ const d=JSON.parse(raw); if(d&&d.v===1){DB=d; DB.laudos=DB.laudos||[]; DB.horarios_excecoes=DB.horarios_excecoes||[]; return;} } }catch(e){}
   DB=gerarDadosTeste(); salvarLocal();
 }
 function nextIdLocal(t){ DB.seq[t]=(DB.seq[t]||0)+1; return DB.seq[t]; }
@@ -83,3 +83,8 @@ function linhasBloco(ub,cfg){
 function nivel2Nome(u){const l=localById(u.nivel_1); if(!l||!u.nivel_2) return ""; return (l.niveis2.split(", ")[u.nivel_2-1])||"";}
 function nivel1Nome(u){const l=localById(u.nivel_1); return l?l.nivel1:"";}
 
+
+// cadastro de clientes: admin, ou RC que também é Líder de área
+const podeCadastrarClientes = u=>can(u,"admin")||(can(u,"rc")&&can(u,"lider"));
+// clientes da obra aberta (os antigos sem obra aparecem em todas até serem vinculados)
+const clientesObra = ()=>DB.clientes.filter(c=>c.id_obra===S.obraId||c.id_obra==null);

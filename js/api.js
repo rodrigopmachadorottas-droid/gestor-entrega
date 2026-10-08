@@ -13,14 +13,15 @@ let sb = null;
 
 const TABS = {
   obras:    { ins: null, upd: ["ordem","nome","cidade","ativa","foto_url","config"] },
-  clientes: { ins: ["id","nome","email","telefone","criado_por"], upd: ["nome","email","telefone"] },
+  clientes: { ins: ["id","id_obra","nome","email","telefone","criado_por"], upd: ["id_obra","nome","email","telefone"] },
   locais:   { ins: ["id","id_obra","nivel1","niveis2"], upd: ["nivel1","niveis2"] },
-  horarios: { ins: ["id","id_obra","segunda","terca","quarta","quinta","sexta","sabado"], upd: ["segunda","terca","quarta","quinta","sexta","sabado"] },
+  horarios: { ins: ["id","id_obra","valido_desde","segunda","terca","quarta","quinta","sexta","sabado"], upd: ["valido_desde","segunda","terca","quarta","quinta","sexta","sabado"] },
+  horarios_excecoes: { ins: ["id","id_obra","data","fechado","horarios","motivo"], upd: ["data","fechado","horarios","motivo"] },
   unidades: { ins: ["id","id_obra","nivel_1","nivel_2","unidade","modulo","id_cliente","prioridade"], upd: ["nivel_1","nivel_2","unidade","modulo","id_cliente","prioridade"] },
   areas:    { ins: ["id","id_obra","descricao"], upd: ["descricao"] }
 };
-const ORDEM_INS = ["clientes","locais","unidades","areas","horarios"];
-const ORDEM_DEL = ["unidades","areas","horarios","locais","clientes"];
+const ORDEM_INS = ["clientes","locais","unidades","areas","horarios","horarios_excecoes"];
+const ORDEM_DEL = ["unidades","areas","horarios_excecoes","horarios","locais","clientes"];
 const HUES = [24,200,12,160,36,90,280,220,190];
 
 const API = { fila: [], snap: {}, ids: {}, reservando: {}, cadeia: Promise.resolve(), ocupado: 0, tmp: 0, carregadoEm: 0 };
@@ -79,18 +80,23 @@ async function lerTudo(tabela, colunas = "*", ordem = "id"){
 }
 
 API.carregar = async function(comPassos){
-  const ROT = { obras:"as obras", obra_acessos:"os acessos às obras", clientes:"os clientes", locais:"os blocos e pavimentos", horarios:"os horários de vistoria",
-    unidades:"as unidades", tarefas_lista:"o histórico de tarefas", areas:"as áreas comuns", tarefas_ac:"as tarefas das áreas comuns", perfis_publicos:"os usuários" };
-  const falta = new Set(Object.keys(ROT));
-  const aviso = () => { if(!comPassos) return; const f = [...falta]; passo(f.length ? `Carregando ${ROT[f.at(-1)]}... (${10 - f.length} de 10)` : "Montando as telas..."); };
+  // três grupos, na ordem em que a pessoa entende: obras > unidades > histórico
+  const GRUPOS = [
+    { t:"Carregando obras", s:"Obras, acessos, blocos e horários", tabs:["obras","obra_acessos","locais","horarios","perfis_publicos"] },
+    { t:"Carregando unidades", s:"Unidades, clientes e áreas comuns", tabs:["unidades","clientes","areas"] },
+    { t:"Carregando histórico", s:"Tarefas de todas as etapas", tabs:["tarefas_lista","tarefas_ac"] } ];
+  const falta = new Set(GRUPOS.flatMap(g => g.tabs));
+  const aviso = () => { if(!comPassos) return; const k = GRUPOS.findIndex(g => g.tabs.some(t => falta.has(t)));
+    if(k < 0) passo("Preparando as telas", "Quase lá"); else passo(GRUPOS[k].t, `${GRUPOS[k].s} · ${k + 1} de 3`); };
   const ler = (t, c, o) => lerTudo(t, c, o).then(r => { falta.delete(t); aviso(); return r; });
   aviso();
   const [obras, acessos, clientes, locais, horarios, unidades, tarefas, areas, tarefas_ac, pessoas] = await Promise.all([
     ler("obras"), ler("obra_acessos", "*", "obra_id"), ler("clientes"), ler("locais"), ler("horarios"),
     ler("unidades"), ler("tarefas_lista"), ler("areas"), ler("tarefas_ac"), ler("perfis_publicos", "*", "login")
   ]);
-  let laudos = [];
+  let laudos = [], horarios_excecoes = [];
   try{ laudos = await lerTudo("laudos"); }catch(_){ /* banco ainda sem a 06_atualizacao: segue sem laudos */ }
+  try{ horarios_excecoes = await lerTudo("horarios_excecoes"); }catch(_){ /* banco ainda sem a 07_atualizacao */ }
   const P = S.perfil;
   const usuarios = pessoas.map((p, i) => ({ id: i + 1, login: p.login, nome: p.nome, foto: p.foto || "", perms: p.funcoes || [] }));
   const eu = { id: 0, login: P.login, nome: P.nome, email: P.email, foto: P.foto || "", perms: P.funcoes || [] };
@@ -101,11 +107,11 @@ API.carregar = async function(comPassos){
     obras: obras.map((o, i) => ({ ...o, hue: HUES[i % HUES.length],
       usuarios: acessos.filter(a => a.obra_id === o.id).map(a => a.login).join(", ") })),
     clientes, locais, horarios, unidades, areas,
-    tarefas: tarefas.map(normTarefa), tarefas_ac: tarefas_ac.map(normTarefa), laudos
+    tarefas: tarefas.map(normTarefa), tarefas_ac: tarefas_ac.map(normTarefa), laudos, horarios_excecoes
   };
   API.tirarFoto();
   API.carregadoEm = Date.now();
-  ["clientes","locais","unidades","areas","horarios"].forEach(t => API.reservar(t));
+  ["clientes","locais","unidades","areas","horarios","horarios_excecoes"].forEach(t => API.reservar(t));
 };
 
 API.tirarFoto = function(){

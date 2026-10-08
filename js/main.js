@@ -11,11 +11,11 @@ async function iniciar(){
   }
   if(!window.supabase){ document.getElementById("app").innerHTML='<p style="padding:24px">Não foi possível carregar a biblioteca do Supabase (js/vendor/supabase.js).</p>'; return; }
   sb=window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-  S.auth={tela:"carregando",passo:"Conectando ao servidor..."}; render();
+  S.auth={tela:"carregando",passo:{t:"Conectando",s:"Abrindo conexão segura com o servidor"}}; render();
   sb.auth.onAuthStateChange(ev=>{ if(ev==="SIGNED_OUT"&&!S.saindo){ S.auth={tela:"entrar",msg:"Sua sessão terminou. Entre de novo."}; render(); } });
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") API.autoAtualizar(); });
   window.addEventListener("beforeunload",e=>{ if(API.ocupado||API.fila.length){ e.preventDefault(); e.returnValue=""; } });
-  passo("Verificando se você já entrou neste aparelho...");
+  passo("Validando login","Verificando se você já entrou neste aparelho");
   const { data:{ session } } = await sb.auth.getSession();
   if(!session){ S.auth={tela:"entrar"}; render(); return; }
   await posLogin();

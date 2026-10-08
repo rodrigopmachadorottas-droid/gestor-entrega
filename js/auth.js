@@ -5,8 +5,9 @@
    ===================================================================== */
 
 /* ---------- tela de abertura (carregando) ---------- */
-function telaBoot(msg){ return `<div class="boot"><img class="boot-ic" src="img/icone.png" alt="Gestor de Entrega"><span class="spin" aria-hidden="true"></span><span class="boot-msg" id="boot-msg">${esc(msg||"Abrindo o app...")}</span></div>`; }
-function passo(msg){ if(S.auth.tela!=="carregando") return; S.auth.passo=msg; const el=document.getElementById("boot-msg"); if(el) el.textContent=msg; else render(); }
+function telaBoot(p){ p=p||{}; return `<div class="boot"><img class="boot-ic" src="img/icone.png" alt="Gestor de Entrega"><div class="boot-t" role="status"><b id="boot-t">${esc(p.t||"Abrindo o app")}</b><span class="spin" aria-hidden="true"></span></div><span class="boot-msg" id="boot-msg">${esc(p.s||"")}</span></div>`; }
+// título (o que está acontecendo) + subtítulo (detalhe)
+function passo(t,s){ if(S.auth.tela!=="carregando") return; S.auth.passo={t,s:s||""}; const a=document.getElementById("boot-t"), b=document.getElementById("boot-msg"); if(a&&b){ a.textContent=t; b.textContent=s||""; } else render(); }
 
 /* ---------- telas de entrada ---------- */
 function authShell(corpo){
@@ -22,7 +23,7 @@ const btnEnviar=(txt)=>`<button class="btn primary auth-go" type="submit" ${S.au
 
 function telaAuth(){
   const A=S.auth, P=S.perfil||{};
-  if(A.tela==="carregando") return telaBoot(A.passo);
+  if(A.tela==="carregando") return telaBoot(typeof A.passo==="string"?{t:A.passo}:A.passo);
   if(A.tela==="entrar") return authShell(`<h1>Entrar</h1>${authMsg()}
     <form data-form="login" class="auth-form" novalidate>${campo("a-email","E-mail","email",`autocomplete="username" value="${esc(A.email||"")}" required`)}${campo("a-senha","Senha","password",'autocomplete="current-password" required')}
     ${btnEnviar("Entrar")}</form>
@@ -61,10 +62,10 @@ function traduzAuth(e){
 }
 
 async function posLogin(){
-  S.auth={tela:"carregando",passo:"Verificando o login..."}; render();
+  S.auth={tela:"carregando",passo:{t:"Validando login",s:"Conferindo a sessão no Supabase"}}; render();
   const { data:{ user } } = await sb.auth.getUser();
   if(!user){ S.auth={tela:"entrar"}; render(); return; }
-  passo("Buscando o seu perfil e as suas permissões...");
+  passo("Validando login",`Buscando o perfil de ${user.email} e as permissões`);
   let p=null;
   for(let i=0;i<4&&!p;i++){ const { data } = await sb.from("perfis").select("*").eq("id",user.id).maybeSingle(); p=data; if(!p) await esperar(700); }
   if(!p){ S.auth={tela:"erro",erro:"Não encontramos o seu perfil. Fale com o administrador (o script 01_estrutura.sql foi rodado?)."}; render(); return; }
