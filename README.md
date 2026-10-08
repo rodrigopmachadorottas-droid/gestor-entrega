@@ -11,7 +11,8 @@ O passo a passo completo para colocar no ar está no documento
 | Caminho | O que é |
 |---|---|
 | `index.html` | página única do app |
-| `css/style.css` | visual (tema claro/escuro) |
+| `css/style.css` | visual (tema claro/escuro) — é o que vale no celular |
+| `css/style-desktop.css` | o mesmo visual 10% menor para o computador (zoom de 90%). **Gerado** por `ferramentas/escala_css.py`: depois de mexer no style.css, rode `python3 ferramentas/escala_css.py` |
 | `js/config.js` | **URL e chave anon do Supabase** (vazio = modo demonstração) |
 | `js/api.js` | leitura e gravação no Supabase |
 | `js/auth.js` | login, pedido de acesso e tela Usuários |
@@ -25,6 +26,7 @@ O passo a passo completo para colocar no ar está no documento
 | `supabase/03_usuarios_antigos.sql` | cria os logins de quem já usava o app (senha inicial Rottas@2026, troca obrigatória) |
 | `supabase/04_atualizacao_2.1.2.sql` | fotos (usuário e obra) e preferências — rodar 1x no projeto que já está no ar |
 | `supabase/05_atualizacao_2.1.3.sql` | funções novas (Qualidade no lugar de Excelência, sem Gerente, Admin exclusivo) e casas sem pavimento — rodar 1x depois da 04 |
+| `supabase/06_atualizacao_2.1.4.sql` | laudos de engenheiro e regra das 24 h de antecedência no agendamento — rodar 1x depois da 05 |
 | `supabase/99_zerar_tudo.sql` | apaga tudo para recomeçar (cuidado) |
 
 ## Rodar no computador
@@ -53,4 +55,4 @@ Os arquivos `02_dados_*.sql` e os CSV têm dados pessoais de clientes: **não su
 
 ## Publicar uma nova versão
 
-Altere os arquivos, troque `?v=2.1.3` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
+Altere os arquivos, troque `?v=2.1.4` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.

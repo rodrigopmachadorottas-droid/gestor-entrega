@@ -89,6 +89,8 @@ API.carregar = async function(comPassos){
     ler("obras"), ler("obra_acessos", "*", "obra_id"), ler("clientes"), ler("locais"), ler("horarios"),
     ler("unidades"), ler("tarefas_lista"), ler("areas"), ler("tarefas_ac"), ler("perfis_publicos", "*", "login")
   ]);
+  let laudos = [];
+  try{ laudos = await lerTudo("laudos"); }catch(_){ /* banco ainda sem a 06_atualizacao: segue sem laudos */ }
   const P = S.perfil;
   const usuarios = pessoas.map((p, i) => ({ id: i + 1, login: p.login, nome: p.nome, foto: p.foto || "", perms: p.funcoes || [] }));
   const eu = { id: 0, login: P.login, nome: P.nome, email: P.email, foto: P.foto || "", perms: P.funcoes || [] };
@@ -99,7 +101,7 @@ API.carregar = async function(comPassos){
     obras: obras.map((o, i) => ({ ...o, hue: HUES[i % HUES.length],
       usuarios: acessos.filter(a => a.obra_id === o.id).map(a => a.login).join(", ") })),
     clientes, locais, horarios, unidades, areas,
-    tarefas: tarefas.map(normTarefa), tarefas_ac: tarefas_ac.map(normTarefa)
+    tarefas: tarefas.map(normTarefa), tarefas_ac: tarefas_ac.map(normTarefa), laudos
   };
   API.tirarFoto();
   API.carregadoEm = Date.now();
@@ -236,13 +238,14 @@ API.enviarAcao = async function(a){
     p_tipo: a.tipo, p_id: reg.id, p_acao: a.acao, p_coluna: a.col || "",
     p_antes: a.antes, p_depois: a.depois,
     p_tarefa: { etapa_antiga: t.etapa_antiga, etapa_nova: t.etapa_nova, obs: t.obs || "", repeticao: t.repeticao,
-                agendamento: t.agendamento || "", anexos, checklist: t.checklist || null, assinatura: t.assinatura || null }
+                agendamento: t.agendamento || "", anexos, checklist: t.checklist || null, assinatura: t.assinatura || null, laudo: a.laudo || null }
   });
   if(error) throw error;
   const srv = normTarefa(data.tarefa);
   Object.keys(t).forEach(k => delete t[k]);           // troca a tarefa local pela oficial (id, autor e hora do servidor)
   Object.assign(t, srv);
   if(srv.assinatura) t.tem_assinatura = true;
+  if(a.laudoLocal && data.laudo) Object.assign(a.laudoLocal, data.laudo);
 };
 
 API.falha = async function(e){
@@ -333,4 +336,23 @@ API.trocarFotoObra = async function(obra, file){
   const r = await reduzirImagem(file, 1000, 1000, false);
   obra.foto_url = MODO_DEMO ? r.dataUrl : await enviarFoto(`obras/${obra.id}/${Date.now()}.jpg`, r.blob);
   saveDB();
+};
+
+/* ---------- laudos ---------- */
+API.laudoRecebido = async function(L, obs, arq){
+  let anexos = null;
+  if(arq){
+    if(MODO_DEMO) anexos = [{ nome: arq.name, tamanho: arq.size }];
+    else {
+      const limpo = arq.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w.\-]+/g, "_").slice(-80);
+      const path = `${L.id_obra}/${L.id_unidade}/laudo-${Date.now()}-${limpo}`;
+      const { error } = await sb.storage.from("anexos").upload(path, arq, { upsert: false, contentType: arq.type || undefined });
+      if(error) throw error;
+      anexos = [{ nome: arq.name, tamanho: arq.size, path }];
+    }
+  }
+  if(MODO_DEMO){ Object.assign(L, { status: "recebido", recebido_em: new Date().toISOString(), recebido_por: REAL_USER, obs: obs || "", anexos }); salvarLocal(); return; }
+  const { data, error } = await sb.rpc("laudo_recebido", { p_id: L.id, p_obs: obs || "", p_anexos: anexos });
+  if(error) throw error;
+  Object.assign(L, data);
 };

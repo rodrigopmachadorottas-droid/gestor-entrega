@@ -43,16 +43,16 @@ function telaIndicadores(){
   const op=ops.find(o=>o.id===I.etapa);
   const nFil=(I.fil.blocos.length?1:0)+(I.ini||I.fim?1:0);
   const comEtapa=I.visao==="Visão Unidades"||I.visao==="Visão Ações";
-  const head=`<div class="row indhead">${comEtapa?`<label class="row" style="gap:8px"><b>Etapa:</b><select class="inp sf" id="ind-etapa" data-ind="etapa" style="width:auto;min-width:220px">${ops.map(o=>`<option value="${o.id}" ${o.id===I.etapa?"selected":""}>${esc(o.nome)}</option>`).join("")}</select></label>`
+  const head=`<div class="row indhead">${comEtapa?`<label class="row" style="gap:7.2px"><b>Etapa:</b><select class="inp sf" id="ind-etapa" data-ind="etapa" style="width:auto;min-width:198px">${ops.map(o=>`<option value="${o.id}" ${o.id===I.etapa?"selected":""}>${esc(o.nome)}</option>`).join("")}</select></label>`
       :`<b style="font-size:1.15rem">${I.visao==="Visão Geral"?"Número de unidades por Fase/Etapa":"Número de unidades aprovadas por etapa"}</b>`}
     ${I.visao==="Visão Ações"?`<b>${I.ini||I.fim?`Período: ${I.ini?fmtData(new Date(I.ini+"T00:00")):"início"} até ${I.fim?fmtData(new Date(I.fim+"T00:00")):"hoje"}`:"Todo o período"}</b>`:""}
-    <span class="spacer"></span>${I.visao==="Visão Unidades"?`<button class="btn sm ghost pdfbtn" data-act="pdfund">Gerar PDF</button>`:""}<select class="inp sf" id="ind-visao" data-ind="visao" style="width:auto">${["Visão Unidades","Visão Geral","Visão Aprovações","Visão Ações"].map(v=>`<option ${v===I.visao?"selected":""}>${v}</option>`).join("")}</select></div>`;
+    <span class="spacer"></span><select class="inp sf" id="ind-visao" data-ind="visao" style="width:auto">${["Visão Unidades","Visão Geral","Visão Aprovações","Visão Ações"].map(v=>`<option ${v===I.visao?"selected":""}>${v}</option>`).join("")}</select></div>`;
   let body="";
   if(I.visao==="Visão Unidades") body=indUnidades(op);
   else if(I.visao==="Visão Geral") body=indGeral();
   else if(I.visao==="Visão Aprovações") body=indAprovacoes();
   else body=indAcoes(op);
-  return topbar(`Indicadores (${OBRA().nome})`,filtroBtn(nFil))+`<main class="screen ${I.visao==="Visão Unidades"?"":"wide"}">${head}${body}</main>`+drawerInd();
+  return topbar(`Indicadores (${OBRA().nome})`,(I.visao==="Visão Unidades"?`<button class="tb-btn" data-act="pdfund" title="Gerar PDF A4 com todos os blocos">${IC.pdf}<span>Gerar PDF</span></button>`:"")+filtroBtn(nFil))+`<main class="screen ${I.visao==="Visão Unidades"?"":"wide"}">${head}${body}</main>`+drawerInd();
 }
 function corrigidosSet(){ return new Set(DB.tarefas.filter(t=>t.id_obra===S.obraId&&t.acao==="corrigir"&&t.etapa_antiga===7).map(t=>t.id_unidade)); }
 function indUnidades(op){
@@ -84,7 +84,7 @@ function layoutBlocos(){
     if(k===linhas.length-1&&linhas.length>1) f=Math.min(f,fAnt);
     fAnt=f; if(f<=1.01) return;
     L.forEach(i=>{ const tw=i.tw+i.w*(f-1), cw=Math.floor((tw-i.g*(i.cols-1))/i.cols*10)/10;
-      i.t.style.gridTemplateColumns=`repeat(${i.cols},${cw}px)`; i.t.style.setProperty("--th",Math.round(Math.min(54,Math.max(40,cw*.55)))+"px"); });
+      i.t.style.gridTemplateColumns=`repeat(${i.cols},${cw}px)`; i.t.style.setProperty("--th",Math.round(Math.min(49,Math.max(36,cw*.55)))+"px"); });
   });
 }
 let _relayout; window.addEventListener("resize",()=>{ clearTimeout(_relayout); _relayout=setTimeout(layoutBlocos,120); });
@@ -112,7 +112,7 @@ function indAprovacoes(){
     if(!fe) niveis.forEach(n=>{ const t=ap.filter(x=>x[c]===n).length; rows+=`<tr><th class="lbl">${esc(n)}</th>${bl.map(b=>`<td>${ap.filter(x=>x[c]===n&&nivel1Nome(x)===b).length}</td>`).join("")}<td class="tot">${t}${ap.length?` (${Math.round(t/ap.length*100)}%)`:""}</td></tr>`; });
   });
   return `<div class="panel" style="overflow-x:auto"><table class="kpi"><thead><tr><th style="background:none"></th>${bl.map(b=>`<th>${esc(b)}</th>`).join("")}<th class="tot">TOTAL</th></tr></thead><tbody>${rows}</tbody></table>
-    <p class="small muted" style="margin:10px 4px 0">Cada linha mostra em qual tentativa a unidade foi aprovada. "Aprovado 1°" é quem passou de primeira.</p></div>`;
+    <p class="small muted" style="margin:9px 3.6px 0">Cada linha mostra em qual tentativa a unidade foi aprovada. "Aprovado 1°" é quem passou de primeira.</p></div>`;
 }
 const RANK_COLS={1:["liberar","cancelar"],2:["aprovar","reprovar","corrigir"],3:["finalizar","cancelar"],4:["aprovar","reprovar"],41:["aprovar","reprovar"],5:["agendar","cancelar"],6:["aprovar","reprovar"],7:["corrigir"]};
 const ACAO_CLS={aprovar:"s-ok",reprovar:"s-bad",corrigir:"s-warn",liberar:"s-info",finalizar:"s-info",agendar:"s-info",cancelar:"s-neutral"};
@@ -122,11 +122,11 @@ function indAcoes(op){
   const T=DB.tarefas.filter(t=>t.id_obra===S.obraId&&t.etapa_antiga===op.etapa&&(!op.coluna||t.coluna===op.coluna)&&bl.has(nivel1Nome(um.get(t.id_unidade)))&&(!ini||new Date(t.data)>=ini)&&(!fim||new Date(t.data)<=fim)).sort((a,b)=>b.data.localeCompare(a.data));
   const rc=RANK_COLS[op.etapa]||[], autores=[...new Set(T.map(t=>t.autor))].map(a=>({a,n:T.filter(t=>t.autor===a).length})).sort((x,y)=>y.n-x.n);
   const lista=T.slice(0,400);
-  return `<div class="acoes"><section class="panel"><h2 class="h2" style="margin-bottom:12px">Movimentações <span class="muted small">(${T.length})</span></h2>
+  return `<div class="acoes"><section class="panel"><h2 class="h2" style="margin-bottom:10.8px">Movimentações <span class="muted small">(${T.length})</span></h2>
     ${T.length?`<div class="scrollbox" id="ind-mov" data-keep-scroll><table class="list"><thead><tr><th>Unidade</th><th class="n">Ação</th><th>Autor</th><th>Data</th><th>Observação</th></tr></thead><tbody>
       ${lista.map(t=>{const x=um.get(t.id_unidade); return `<tr><td style="white-space:nowrap">${esc(nivel1Nome(x))} - ${esc(x.unidade)}</td><td class="n"><span class="act ${ACAO_CLS[t.acao]||""}">${esc(t.acao)}</span></td><td>${esc(t.autor)}</td><td class="tnum" style="white-space:nowrap">${fmtDTL(new Date(t.data))}</td><td>${esc(t.obs)}</td></tr>`;}).join("")}
       </tbody></table>${T.length>400?`<p class="small muted">Mostrando as 400 mais recentes.</p>`:""}</div>`:`<div class="empty"><b>Nenhuma movimentação</b><span>Mude a etapa ou o período.</span></div>`}</section>
-    <section class="panel"><h2 class="h2" style="margin-bottom:12px">Rank de usuários</h2>
+    <section class="panel"><h2 class="h2" style="margin-bottom:10.8px">Rank de usuários</h2>
     <div style="overflow-x:auto"><table class="list"><thead><tr><th>Usuário</th>${rc.map(c=>`<th class="n"><span class="act ${ACAO_CLS[c]}" style="min-width:0">${c}</span></th>`).join("")}<th class="n">Total</th></tr></thead><tbody>
       ${autores.map(r=>`<tr><td>${esc(r.a)}</td>${rc.map(c=>`<td class="n">${T.filter(t=>t.autor===r.a&&t.acao===c).length}</td>`).join("")}<td class="n"><b>${r.n}</b></td></tr>`).join("")}</tbody>
       <tfoot><tr><td></td>${rc.map(c=>{const n=T.filter(t=>t.acao===c).length; return `<td class="n">${n}${T.length&&n?` (${Math.round(n/T.length*100)}%)`:""}</td>`;}).join("")}<td class="n">${T.length}</td></tr></tfoot></table></div></section></div>`;
@@ -154,7 +154,7 @@ function eventosAgenda(){
   const resAc={}; DB.tarefas_ac.filter(t=>t.id_obra===S.obraId&&t.coluna==="rep_vistoria_sindico"&&(t.acao==="aprovar"||t.acao==="reprovar")).forEach(t=>{(resAc[t.id_local]=resAc[t.id_local]||[]).push(t);});
   Object.values(ac).forEach(L=>L.forEach((t,i)=>{ if(t.acao!=="agendar") return; const d=parseAg(t.agendamento); const a=DB.areas.find(z=>z.id===t.id_local); if(!a) return;
     const prox=L.slice(i+1).find(z=>z.acao==="agendar");
-    if(d) ev.push({d,hora:"Áreas comuns",txt:a.descricao,sub:"Vistoria do síndico",rep:t.repeticao,cx:!!(L[i+1]&&L[i+1].acao==="cancelar"),ac:1,st:resultado(resAc[a.id],t,prox)}); }));
+    if(d) ev.push({d,hora:"Áreas comuns",txt:a.descricao,sub:"Vistoria do síndico",rep:t.repeticao,cx:!!(L[i+1]&&L[i+1].acao==="cancelar"),ac:1,idac:a.id,st:resultado(resAc[a.id],t,prox)}); }));
   return ev;
 }
 function telaAgenda(){
@@ -165,8 +165,12 @@ function telaAgenda(){
   const q=A.busca.trim().toLowerCase();
   const sel=doDia(A.dia).filter(e=>!q||(e.txt+" "+e.sub).toLowerCase().includes(q));
   const grupos=[...new Set(sel.map(e=>e.hora))];
-  return topbar("Agenda Vistorias Clientes")+`<main class="screen"><div class="agenda">
-    <section class="month"><div class="row" style="margin-bottom:12px"><button class="iconbtn" data-act="agdmes" data-d="-1" aria-label="Mês anterior">${IC.chevL}</button><b style="font-size:1.3rem;min-width:170px;text-align:center">${esc(mesNome(m))}</b><button class="iconbtn" data-act="agdmes" data-d="1" aria-label="Próximo mês">${IC.chevR}</button>
+  const info=`<button class="iconbtn" data-act="agdinfo" aria-label="Legenda das cores" aria-expanded="${!!S.agdInfo}" title="Legenda">${IC.info}</button>`;
+  const leg=S.agdInfo?`<div class="dd-scrim" data-act="agdinfo"></div><div class="ag-pop" role="dialog" aria-label="Legenda"><b>Cores da vistoria</b>
+    <span><i class="vdot st-warn"></i>Agendada, ainda não feita</span><span><i class="vdot st-ok"></i>Feita e aprovada</span><span><i class="vdot st-bad"></i>Feita e reprovada</span><span><i class="vdot st-cx"></i>Cancelada</span>
+    <span class="small muted">No calendário é a bolinha; na lista do dia é o fundo do número da vistoria (1°, 2°...). Toque num card para abrir a unidade.</span></div>`:"";
+  return topbar("Agenda Vistorias Clientes",info)+leg+`<main class="screen"><div class="agenda">
+    <section class="month"><div class="row" style="margin-bottom:10.8px"><button class="iconbtn" data-act="agdmes" data-d="-1" aria-label="Mês anterior">${IC.chevL}</button><b style="font-size:1.3rem;min-width:153px;text-align:center">${esc(mesNome(m))}</b><button class="iconbtn" data-act="agdmes" data-d="1" aria-label="Próximo mês">${IC.chevR}</button>
       <span class="spacer"></span><button class="btn sm" data-act="agdhoje">Hoje</button></div>
       <div class="mgrid">${["dom","seg","ter","qua","qui","sex","sáb"].map(w=>`<div class="wd">${w}</div>`).join("")}
       ${cells.map(d=>{const es=doDia(d), out=d.getMonth()!==m.getMonth();
@@ -175,10 +179,36 @@ function telaAgenda(){
           <span class="dots">${es.slice(0,6).map(e=>`<i class="st-${e.cx?"cx":e.st}"></i>`).join("")}</span></button>`;}).join("")}</div></section>
     <aside class="side"><div class="row"><b style="font-size:1.1rem">${fmtData(A.dia)}</b><span class="spacer"></span><span class="muted small">${sel.filter(e=>!e.cx).length} vistoria(s)</span></div>
       ${buscaBox("agdBusca",A.busca,"Pesquisar unidade ou cliente").replace('class="search"','class="search" style="width:100%"')}
-      ${grupos.length?grupos.map(h=>`<div class="slotgrp"><h4>${esc(h)}</h4>${sel.filter(e=>e.hora===h).map(e=>`<div class="vcard ${e.cx?"cx":""}"><b><i class="vdot st-${e.cx?"cx":e.st}" title="${e.cx?"Cancelada":e.st==="ok"?"Vistoria aprovada":e.st==="bad"?"Vistoria reprovada":"Vistoria ainda não feita"}"></i>${esc(e.txt)}</b><span class="tag">${e.rep||1}°</span><span>${e.cx?"Cancelado":esc(e.sub)}</span></div>`).join("")}</div>`).join("")
-        :`<div class="empty" style="padding:40px 8px"><b>Nenhuma vistoria neste dia</b><span>Escolha outro dia no calendário.</span></div>`}
-    <div class="ag-leg"><span><i class="vdot st-warn"></i>Agendada</span><span><i class="vdot st-ok"></i>Aprovada</span><span><i class="vdot st-bad"></i>Reprovada</span><span><i class="vdot st-cx"></i>Cancelada</span></div>
+      ${grupos.length?grupos.map(h=>`<div class="slotgrp"><h4>${esc(h)}</h4>${sel.filter(e=>e.hora===h).map(e=>`<button class="vcard ${e.cx?"cx":""}" data-act="agdabrir" data-id="${e.ac?e.idac:e.id}" ${e.ac?'data-ac="1"':""} title="${e.cx?"Cancelada":e.st==="ok"?"Vistoria aprovada":e.st==="bad"?"Vistoria reprovada":"Vistoria agendada, ainda não feita"}"><b>${esc(e.txt)}</b><span class="tag st-${e.cx?"cx":e.st}">${e.rep||1}°</span><span>${e.cx?"Cancelado":esc(e.sub)}</span></button>`).join("")}</div>`).join("")
+        :`<div class="empty" style="padding:36px 7.2px"><b>Nenhuma vistoria neste dia</b><span>Escolha outro dia no calendário.</span></div>`}
     </aside></div></main>`;
+}
+
+/* ================= TELA: LAUDOS (cliente com engenheiro na vistoria) ================= */
+const laudosObra=()=>(DB.laudos||[]).filter(L=>L.id_obra===S.obraId);
+function itemLaudos(){ const n=laudosObra().filter(L=>L.status==="pendente").length;
+  return `<button class="sb-item ${S.screen==="laudos"?"on":""}" data-act="ir" data-to="laudos">${IC.pdf}Laudos${n?`<span class="sb-badge">${n}</span>`:""}</button>`; }
+function telaLaudos(){
+  const aba=S.laudoAba||"pendente", todos=laudosObra(), lista=todos.filter(L=>L.status===aba).sort((a,b)=>aba==="pendente"?a.criado_em.localeCompare(b.criado_em):String(b.recebido_em).localeCompare(String(a.recebido_em)));
+  const rc=can(ME(),"rc"), dias=d=>Math.max(0,Math.floor((Date.now()-new Date(d))/864e5));
+  const card=L=>{ const x=DB.unidades.find(u=>u.id===L.id_unidade), c=x&&clienteById(x.id_cliente);
+    return `<div class="panel laudo"><button class="laudo-main" data-act="abrirund" data-id="${L.id_unidade}"><b>${esc(x?`${nivel1Nome(x)} · ${x.unidade}`:"Unidade")}</b>
+      <span>${c?esc(tituloCase(c.nome)):"Sem cliente"}${c&&c.telefone?` · <span class="tnum">${esc(fmtTel(c.telefone))}</span>`:""}</span>
+      <span class="small muted">Engenheiro: ${esc(L.engenheiro||"não informado")} · vistoria em ${fmtData(new Date(L.criado_em))}${L.status==="pendente"?` · <b class="${dias(L.criado_em)>7?"t-bad":""}">${dias(L.criado_em)} dia(s) esperando</b>`:` · recebido em ${fmtData(new Date(L.recebido_em))}${L.recebido_por?` por ${esc(nomeUsuario(L.recebido_por))}`:""}`}</span>
+      ${L.obs?`<span class="small">${esc(L.obs)}</span>`:""}${L.anexos&&L.anexos.length?`<span class="small">${IC.clip}${L.anexos.map(a=>a.path?`<button class="linkbtn" data-act="anexo" data-path="${esc(a.path)}">${esc(a.nome)}</button>`:esc(a.nome)).join(", ")}</span>`:""}</button>
+      ${L.status==="pendente"&&rc?`<button class="btn primary sm" data-act="laudoabrir" data-id="${L.id}">Marcar como recebido</button>`:""}</div>`; };
+  const nP=todos.filter(L=>L.status==="pendente").length, nR=todos.length-nP;
+  return topbar("Laudos de vistoria")+`<main class="screen laudos"><p class="muted small" style="margin:0">Quando o cliente traz um engenheiro ou responsável técnico na vistoria, o laudo dele precisa ser enviado para a Rottas. O RC cobra e marca aqui quando receber.</p>
+    <div class="seg tabs" role="tablist"><button class="${aba==="pendente"?"on":""}" data-act="laudoaba" data-v="pendente">Pendentes (${nP})</button><button class="${aba==="recebido"?"on":""}" data-act="laudoaba" data-v="recebido">Recebidos (${nR})</button></div>
+    ${lista.length?`<div class="laudos-lista">${lista.map(card).join("")}</div>`:`<div class="panel empty"><b>${aba==="pendente"?"Nenhum laudo pendente":"Nenhum laudo recebido ainda"}</b><span>Os laudos aparecem aqui quando a vistoria do cliente é registrada com engenheiro.</span></div>`}</main>`;
+}
+function modalLaudo(){
+  const R=S.laudoRec, L=(DB.laudos||[]).find(z=>z.id===R.id); if(!L) return ""; const x=DB.unidades.find(u=>u.id===L.id_unidade);
+  return `<div class="modal" role="dialog" aria-modal="true" aria-label="Laudo recebido"><div class="scrim" data-act="laudofechar"></div><div class="box sm2">
+    <div class="mhead"><div class="t"><b class="conf-t">Laudo recebido</b><div class="small muted">${esc(x?`${nivel1Nome(x)} · ${x.unidade}`:"")}</div></div><button class="iconbtn" data-act="laudofechar" aria-label="Fechar">${IC.close}</button></div>
+    <div class="mbody"><div class="field"><label for="laudo-obs">Observação (opcional)</label><textarea class="inp" id="laudo-obs" rows="3" placeholder="Ex.: recebido por e-mail">${esc(R.obs)}</textarea></div>
+      <label class="anxbtn">${IC.clip}${R.arq?esc(R.arq.name):"Anexar o laudo (opcional)"}<input type="file" id="laudo-file" accept="application/pdf,image/*" hidden></label></div>
+    <div class="mfoot"><button class="btn primary" data-act="laudook">Confirmar recebimento</button></div></div></div>`;
 }
 
 /* ================= TELA: LOCAIS ================= */
@@ -197,7 +227,7 @@ function telaLocais(){
     <div class="mbody"><div class="field"><label>Foto de capa</label><div class="capa">${fotoObra(o)?`<img src="${esc(fotoObra(o))}" alt="Foto atual de ${esc(o.nome)}">`:`<div class="capa-vazia">Sem foto</div>`}
         <label class="btn sm ghost">${IC.camera}Alterar foto<input type="file" id="foto-obra" accept="image/*" hidden></label></div><span class="small muted">É a imagem do card da obra na tela inicial.</span></div>
       <div class="field"><label>Tipo da obra</label><div class="seg" style="align-self:flex-start"><button class="${cfg.tipo==="predio"?"on":""}" data-act="cfgtipo" data-v="predio">Prédio</button><button class="${cfg.tipo==="casa"?"on":""}" data-act="cfgtipo" data-v="casa">Casas</button></div></div>
-      ${cfg.tipo==="casa"?`<div class="field"><label for="cfg-cpl">Casas por linha na Visão Unidades</label><input class="inp tnum" type="number" min="1" max="40" id="cfg-cpl" data-cfgnum="casasPorLinha" value="${cfg.casasPorLinha||8}" style="max-width:120px"><span class="small muted">As casas de cada quadra aparecem em ordem, quebrando a linha a cada ${cfg.casasPorLinha||8}.</span></div>`:""}
+      ${cfg.tipo==="casa"?`<div class="field"><label for="cfg-cpl">Casas por linha na Visão Unidades</label><input class="inp tnum" type="number" min="1" max="40" id="cfg-cpl" data-cfgnum="casasPorLinha" value="${cfg.casasPorLinha||8}" style="max-width:108px"><span class="small muted">As casas de cada quadra aparecem em ordem, quebrando a linha a cada ${cfg.casasPorLinha||8}.</span></div>`:""}
       <div class="field"><label>Testes da validação técnica</label>${TESTES.map(t=>`<label class="chk"><input type="checkbox" id="cfg-${t.k}" data-cfgteste="${t.k}" ${cfg.testes.includes(t.k)?"checked":""}>${t.nome}</label>`).join("")}</div>
       <div class="field"><label>Etapas opcionais</label><label class="chk"><input type="checkbox" id="cfg-previa" data-cfg="previa" ${cfg.previa?"checked":""}>Vistoria Prévia depois da Qualidade</label><label class="chk"><input type="checkbox" id="cfg-direto" data-cfg="aprovarDireto" ${cfg.aprovarDireto?"checked":""}>Permitir "Aprovar direto" (pula a vistoria Qualidade)</label></div></div></div></div>`:"";
   const modal=L.modal?modalLocais():"";
@@ -205,11 +235,11 @@ function telaLocais(){
   return topbar("Locais",right)+`<main class="locais">
     <aside class="loc-side">
       <div class="seg loc-abas" role="tablist"><button class="${S.locAba!=="ac"?"on":""}" role="tab" aria-selected="${S.locAba!=="ac"}" data-act="locaba" data-v="und">Unidades</button><button class="${S.locAba==="ac"?"on":""}" role="tab" aria-selected="${S.locAba==="ac"}" data-act="locaba" data-v="ac">Áreas comuns <span class="tnum">(${acs.length})</span></button></div>
-      ${S.locAba==="ac"?`<div class="loc-list"><p class="muted small" style="padding:4px 8px 0;margin:0">Áreas que não pertencem a um bloco: salão de festas, piscina, guarita... Toque em uma para renomear ou no + para adicionar.</p></div>`:`
+      ${S.locAba==="ac"?`<div class="loc-list"><p class="muted small" style="padding:3.6px 7.2px 0;margin:0">Áreas que não pertencem a um bloco: salão de festas, piscina, guarita... Toque em uma para renomear ou no + para adicionar.</p></div>`:`
       <div class="row">${buscaBox("locBusca",L.busca||"","Pesquisar bloco ou pavimento").replace('class="search"','class="search loc-search"')}</div>
       <div class="loc-list" id="loc-list" data-keep-scroll>${vis.map(([l,ns])=>`<div class="loc-grp"><button class="loc-h" data-act="locedit" data-id="${l.id}" title="Editar ${esc(l.nivel1)}">${esc(l.nivel1)}${IC.edit}</button>
         ${ns.map(([n,i])=>`<button class="loc-p ${L.localId===l.id&&(casa||L.n2===i)?"on":""}" data-act="locsel" data-id="${l.id}" data-n="${i}">${esc(n)}</button>`).join("")}</div>`).join("")
-        ||`<p class="muted small" style="padding:8px">Nada encontrado.</p>`}
+        ||`<p class="muted small" style="padding:7.2px">Nada encontrado.</p>`}
         <button class="loc-novo" data-act="locnovo">${IC.plus}${casa?"Nova quadra":"Novo bloco"}</button></div>`}
     </aside>
     <section class="loc-main">${L.localId==="ac"?`<h2 class="loc-crumb">${esc(o.nome)} &gt; Áreas Comuns</h2>
@@ -285,9 +315,9 @@ function telaHorarios(){
 
 /* ================= TELA: VERSÕES ================= */
 function telaVersoes(){
-  const V=[["v2.1.3 (08/10/2026)",["Funções: Excelência virou Qualidade e a função Gerente saiu; Admin é só do Rodrigo.","Indicadores gerais abrem por um ícone na tela inicial.","Visão Unidades quebra os blocos em linhas (rolagem vertical) e reparte a largura da tela entre os blocos de cada linha.","Obras de casas: só quadras, com N casas por linha (configuração da obra).","Locais: cria bloco com pavimentos e unidades por andar (AP 101...) e quadra com casas em sequência (CASA 1...).","Celular: cabeçalho da tela inicial em uma linha, Horários e Cadastro de clientes ajustados."]],["v2.1.2 (07/10/2026)",["Ícone do app para instalar no celular e ícone redondo na aba do navegador.","Configurações Admin (logo da tela inicial): simular acesso e gerenciar usuários.","Sair pelo ícone ao lado do seu nome no menu; foto do usuário e cores nas iniciais.","Preferências no perfil: tela inicial da obra e tema (claro é o padrão).","Locais, Clientes e Usuários só para admin; Locais com abas Unidades e Áreas comuns.","Foto de capa da obra na configuração.","Agenda: cor da vistoria pelo resultado (agendada, aprovada, reprovada).","Indicadores gerais redesenhados e PDF A4 da Visão Unidades.","Atualização em segundo plano sem a tela de Sincronizando; nova tela de abertura."]],["v2.1.1 (05/10/2026)",["Usuários do app antigo já entram cadastrados e aprovados, com as mesmas funções e obras.","Senha provisória obriga a criar uma senha própria no primeiro login."]],["v2.1.0 (05/10/2026)",["Versão web em produção: Vercel + Supabase, com os dados importados do SharePoint.","Login com e-mail e senha; novos acessos ficam pendentes até o admin aprovar.","Tela Usuários (admin): aprovar, escolher funções e obras, bloquear e definir senha provisória.","Função Gerente (antigo \"supervisor\"): vê os indicadores gerais na tela inicial.","Anexos guardados de verdade (teste de gás) e assinatura do cliente carregada sob demanda.","Ações conferidas no servidor: permissão por função e aviso quando outra pessoa mexeu antes."]],["v2.0.4 (05/10/2026)",["Cadastro de áreas comuns na tela de Locais."]],["v2.0.3 (05/10/2026)",["Painel de filtros no design do app original."]],["v2.0.2 (05/10/2026)",["Tela de Locais no layout do app original; configuração da obra em botão no cabeçalho.","Modo escuro mantém o cabeçalho laranja e o fundo desfocado do menu.","Novas cores do cabeçalho das etapas e da tabela de unidades."]],["v2.0.1 (05/10/2026)",["Tela de perfil com acessos, obras e tarefas feitas.","Nova tela de clientes: vínculo por unidade com busca de cliente e cadastro rápido.","Checklist também na reprova da Qualidade e na Vistoria do Cliente, com assinatura do cliente.","Anexos só na aprovação do teste de Gás.","Popup mantém a rolagem depois de uma ação; botões alinhados à direita; linha do tempo nas movimentações.","Ajustes para celular e proporções das telas."]],["v2.0.0 (05/10/2026)",["Botões de ação abrem uma confirmação com observação e anexos. Reprova de teste pede o motivo e a aprovação da Qualidade pede o checklist.","Agendamento abre como uma aba do próprio popup da unidade.","Indicadores gerais de todas as obras na tela inicial (admin).","Ícones originais no menu, linhas verticais nas tabelas e ajustes de rolagem."]],["v2.0 · protótipo web (05/10/2026)",["Recriação do app como site, com os mesmos fluxos e telas.","Regras por obra viraram configuração: testes ativos, Vistoria Prévia e Aprovar direto.","Correções: cores e contagens de Gás, Dreno e Vistoria Prévia nos indicadores; Visão Aprovações inclui Gás e Prévia.","Liberação em lote passa a registrar as tarefas no histórico.","Horário cheio fica bloqueado no agendamento; cancelar agendamento mantém o número da vistoria.","Agenda com busca funcionando e vistorias das áreas comuns."]],
+  const V=[["v2.1.4 (08/10/2026)",["Tudo 10% menor (como o zoom de 90% do navegador).","Indicadores Gerais (status atual) para quem tem mais de uma obra, só com as etapas das fases de cada perfil.","Unidades: margens fixas ao rolar a tabela, coluna Quadra corrigida, busca A101 e Informações Extras só para admin (desmarcado).","Áreas Comuns some do menu quando a obra não tem nenhuma.","Gerar PDF no cabeçalho dos Indicadores.","Agenda: legenda no ícone de informação, cor no número da vistoria e card abre a unidade; agendamento só com 24 horas de antecedência.","Vistoria do cliente registra se veio engenheiro; laudos pendentes na tela Laudos."]],["v2.1.3 (08/10/2026)",["Funções: Excelência virou Qualidade e a função Gerente saiu; Admin é só do Rodrigo.","Indicadores gerais abrem por um ícone na tela inicial.","Visão Unidades quebra os blocos em linhas (rolagem vertical) e reparte a largura da tela entre os blocos de cada linha.","Obras de casas: só quadras, com N casas por linha (configuração da obra).","Locais: cria bloco com pavimentos e unidades por andar (AP 101...) e quadra com casas em sequência (CASA 1...).","Celular: cabeçalho da tela inicial em uma linha, Horários e Cadastro de clientes ajustados."]],["v2.1.2 (07/10/2026)",["Ícone do app para instalar no celular e ícone redondo na aba do navegador.","Configurações Admin (logo da tela inicial): simular acesso e gerenciar usuários.","Sair pelo ícone ao lado do seu nome no menu; foto do usuário e cores nas iniciais.","Preferências no perfil: tela inicial da obra e tema (claro é o padrão).","Locais, Clientes e Usuários só para admin; Locais com abas Unidades e Áreas comuns.","Foto de capa da obra na configuração.","Agenda: cor da vistoria pelo resultado (agendada, aprovada, reprovada).","Indicadores gerais redesenhados e PDF A4 da Visão Unidades.","Atualização em segundo plano sem a tela de Sincronizando; nova tela de abertura."]],["v2.1.1 (05/10/2026)",["Usuários do app antigo já entram cadastrados e aprovados, com as mesmas funções e obras.","Senha provisória obriga a criar uma senha própria no primeiro login."]],["v2.1.0 (05/10/2026)",["Versão web em produção: Vercel + Supabase, com os dados importados do SharePoint.","Login com e-mail e senha; novos acessos ficam pendentes até o admin aprovar.","Tela Usuários (admin): aprovar, escolher funções e obras, bloquear e definir senha provisória.","Função Gerente (antigo \"supervisor\"): vê os indicadores gerais na tela inicial.","Anexos guardados de verdade (teste de gás) e assinatura do cliente carregada sob demanda.","Ações conferidas no servidor: permissão por função e aviso quando outra pessoa mexeu antes."]],["v2.0.4 (05/10/2026)",["Cadastro de áreas comuns na tela de Locais."]],["v2.0.3 (05/10/2026)",["Painel de filtros no design do app original."]],["v2.0.2 (05/10/2026)",["Tela de Locais no layout do app original; configuração da obra em botão no cabeçalho.","Modo escuro mantém o cabeçalho laranja e o fundo desfocado do menu.","Novas cores do cabeçalho das etapas e da tabela de unidades."]],["v2.0.1 (05/10/2026)",["Tela de perfil com acessos, obras e tarefas feitas.","Nova tela de clientes: vínculo por unidade com busca de cliente e cadastro rápido.","Checklist também na reprova da Qualidade e na Vistoria do Cliente, com assinatura do cliente.","Anexos só na aprovação do teste de Gás.","Popup mantém a rolagem depois de uma ação; botões alinhados à direita; linha do tempo nas movimentações.","Ajustes para celular e proporções das telas."]],["v2.0.0 (05/10/2026)",["Botões de ação abrem uma confirmação com observação e anexos. Reprova de teste pede o motivo e a aprovação da Qualidade pede o checklist.","Agendamento abre como uma aba do próprio popup da unidade.","Indicadores gerais de todas as obras na tela inicial (admin).","Ícones originais no menu, linhas verticais nas tabelas e ajustes de rolagem."]],["v2.0 · protótipo web (05/10/2026)",["Recriação do app como site, com os mesmos fluxos e telas.","Regras por obra viraram configuração: testes ativos, Vistoria Prévia e Aprovar direto.","Correções: cores e contagens de Gás, Dreno e Vistoria Prévia nos indicadores; Visão Aprovações inclui Gás e Prévia.","Liberação em lote passa a registrar as tarefas no histórico.","Horário cheio fica bloqueado no agendamento; cancelar agendamento mantém o número da vistoria.","Agenda com busca funcionando e vistorias das áreas comuns."]],
     ["v1.1.0 (12/02/2025)",["Indicadores"]],["v1.0.0 (18/11/2025)",["Versão inicial!","Criação do banco de dados","Criação do logo","Tela Home, seletor de obras"]]];
-  return topbar("Versões")+`<main class="screen"><section class="panel" style="max-width:760px">${V.map(([t,l])=>`<h2 class="h3" style="margin:6px 0">${esc(t)}</h2><ul style="margin:0 0 18px;padding-left:20px">${l.map(i=>`<li>${esc(i)}</li>`).join("")}</ul>`).join("")}</section></main>`;
+  return topbar("Versões")+`<main class="screen"><section class="panel" style="max-width:684px">${V.map(([t,l])=>`<h2 class="h3" style="margin:5.4px 0">${esc(t)}</h2><ul style="margin:0 0 16.2px;padding-left:18px">${l.map(i=>`<li>${esc(i)}</li>`).join("")}</ul>`).join("")}</section></main>`;
 }
 
 /* ================= RENDER ================= */
@@ -301,10 +331,11 @@ function render(){
   else if(S.screen==="usuarios"){ h=telaUsuarios(); }
   else if(S.screen==="home"||!S.obraId){ h=telaHome(); }
   else{
-    h={unidades:telaUnidades,areas:telaAreas,indicadores:telaIndicadores,agenda:telaAgenda,locais:telaLocais,clientes:telaClientes,horarios:telaHorarios,versoes:telaVersoes,perfil:telaPerfil}[S.screen]();
+    h={laudos:telaLaudos,unidades:telaUnidades,areas:telaAreas,indicadores:telaIndicadores,agenda:telaAgenda,locais:telaLocais,clientes:telaClientes,horarios:telaHorarios,versoes:telaVersoes,perfil:telaPerfil}[S.screen]();
     if(S.popup&&S.popup.tipo==="und") h+=popupUnidade();
     if(S.popup&&S.popup.tipo==="ac") h+=popupArea();
     if(S.conf) h+=confirmDialog();
+    if(S.laudoRec) h+=modalLaudo();
     h+=menuLateral();
   }
   if(!S.auth.tela) h+=extrasAuth();

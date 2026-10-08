@@ -4,7 +4,7 @@ function trocarUsuario(login){ S.user=login; S.confirmReset=false; resetFiltros(
 function aplicarTema(){ document.documentElement.dataset.theme=S.dark?"dark":"light"; const m=document.querySelector('meta[name="theme-color"]'); if(m) m.content=S.dark?"#212329":"#FF9114"; }
 function aplicarPrefs(p){ p=p||{}; if(p.tema){ S.dark=p.tema==="dark"; aplicarTema(); try{localStorage.setItem("ge-tema",p.tema);}catch(_){} } }
 const TELAS_INICIAIS=[["indicadores","Indicadores"],["unidades","Unidades"],["areas","Áreas Comuns"],["agenda","Agenda"]];
-function telaInicialObra(){ const t=((S.perfil||{}).prefs||{}).tela; if(t==="agenda"&&!can(ME(),"admin","obra","qualidade","rc")) return "indicadores"; return TELAS_INICIAIS.some(x=>x[0]===t)?t:"indicadores"; }
+function telaInicialObra(){ const t=((S.perfil||{}).prefs||{}).tela; if(t==="areas"&&S.obraId&&!DB.areas.some(a=>a.id_obra===S.obraId)) return "indicadores"; if(t==="agenda"&&!can(ME(),"admin","obra","qualidade","rc")) return "indicadores"; return TELAS_INICIAIS.some(x=>x[0]===t)?t:"indicadores"; }
 function bloqueadoPorLote(){ if(S.lote.q.length){ toast("Aviso","Você tem liberações não salvas","Toque em Liberar ou Cancelar antes de sair."); return true; } return false; }
 function entrarObra(id){ S.obraId=id; S.screen=telaInicialObra(); S.nav=false; S.navObras=false; S.popup=null; S.busca=""; S.lote={on:false,q:[]}; S.loc={localId:null,n2:null,modal:null,cfgAberta:false}; S.hor=null; S.agd={mes:new Date(new Date().getFullYear(),new Date().getMonth(),1),dia:startOfDay(new Date()),busca:""}; resetFiltros(); }
 
@@ -27,6 +27,14 @@ document.addEventListener("click",e=>{
     locaba(){ S.locAba=el.dataset.v; if(S.locAba==="ac") S.loc.localId="ac"; else if(S.loc.localId==="ac") S.loc.localId=null; },
     fotodel(){ API.removerMinhaFoto().then(()=>{ toast("Sucesso","Foto removida"); render(); }).catch(err=>toast("Erro","Não foi possível remover a foto",msgErro(err))); },
     pdfund(){ gerarPdfUnidades(); },
+    agdinfo(){ S.agdInfo=!S.agdInfo; },
+    agdabrir(){ S.popup={tipo:el.dataset.ac?"ac":"und",id}; S.agdInfo=false; },
+    engsim(){ S.conf.eng=el.dataset.v==="1"; },
+    laudoaba(){ S.laudoAba=el.dataset.v; },
+    laudoabrir(){ S.laudoRec={id,obs:"",arq:null}; },
+    laudofechar(){ S.laudoRec=null; },
+    laudook(){ const R=S.laudoRec, L=(DB.laudos||[]).find(z=>z.id===R.id); if(!L) return; S.carregando="Salvando...";
+      API.laudoRecebido(L,R.obs,R.arq).then(()=>{ S.laudoRec=null; toast("Sucesso","Laudo marcado como recebido"); }).catch(err=>toast("Erro","Não foi possível salvar",msgErro(err))).finally(()=>{ S.carregando=""; render(); }); },
     sync(){ S.nav=false; if(MODO_DEMO){ carregarLocal(); toast("Sucesso","Informações da obra sincronizadas"); } else API.recarregar(true); },
     reset(){ if(!S.confirmReset){ S.confirmReset=true; return; } S.confirmReset=false; if(!MODO_DEMO) return; DB=gerarDadosTeste(); salvarLocal(); if(S.obraId) entrarObra(S.obraId); toast("Info","Dados de teste restaurados"); },
     obra(){ entrarObra(id); },
@@ -74,6 +82,7 @@ document.addEventListener("click",e=>{
       const A=S.ag; if(!A.dia||!A.hora){ toast("Erro","Selecione uma data e um horário"); return; }
       const x=DB.unidades.find(u=>u.id===A.id), str=fmtData(A.dia)+" "+A.hora, h=horariosDia(S.obraId,DIA_KEY[A.dia.getDay()]).find(z=>z.Horas===A.hora);
       if(h&&ocupacao(S.obraId,str,x.id)>=h.Pessoas){ toast("Erro","Esse horário já está lotado","Escolha outro horário."); return; }
+      if(!can(ME(),"admin")&&!antecedenciaOk(str)){ toast("Erro","Precisa de 24 horas de antecedência","Escolha um horário a partir de amanhã neste mesmo horário."); return; }
       executarAcao(x,"agendar","agendamento",{autor:S.user,obs:(document.getElementById("ag-obs")||{}).value||"",agendamento:str}); saveDB();
       S.ag=null; toast("Sucesso","Vistoria agendada",`${x.unidade} · ${str}`);
     },
@@ -155,6 +164,7 @@ document.addEventListener("input",e=>{
   else if(b==="cliQ"){ S.cli.q=t.value; render(); }
   else if(t.dataset.ncli){ S.cli.nform[t.dataset.ncli]= t.dataset.ncli==="telefone"? t.value.replace(/\D/g,"") : t.value; if(t.dataset.ncli==="telefone") t.value=S.cli.nform.telefone; }
   else if(t.dataset.locf&&t.dataset.locf!=="gerar"&&S.loc.modal&&S.loc.modal.f){ S.loc.modal.f[t.dataset.locf]=t.value; render(); }
+  else if(t.id==="laudo-obs"&&S.laudoRec){ S.laudoRec.obs=t.value; }
   else if(t.dataset.conf&&S.conf){ S.conf[t.dataset.conf]=t.value; }
   else if(t.dataset.cli){ S.cli.form[t.dataset.cli]= t.dataset.cli==="telefone"? t.value.replace(/\D/g,"") : t.value; if(t.dataset.cli==="telefone") t.value=S.cli.form.telefone; }
 });
@@ -165,6 +175,7 @@ document.addEventListener("change",e=>{
     API.trocarMinhaFoto(f).then(()=>toast("Sucesso","Foto atualizada")).catch(err=>toast("Erro","Não foi possível trocar a foto",msgErro(err))).finally(()=>{ S.carregando=""; render(); }); return; }
   if(t.id==="foto-obra"&&t.files[0]){ const f=t.files[0]; t.value=""; S.carregando="Enviando a foto da obra..."; render();
     API.trocarFotoObra(OBRA(),f).then(()=>toast("Sucesso","Foto da obra atualizada")).catch(err=>toast("Erro","Não foi possível trocar a foto",msgErro(err))).finally(()=>{ S.carregando=""; render(); }); return; }
+  if(t.id==="laudo-file"&&S.laudoRec){ S.laudoRec.arq=t.files[0]||null; render(); return; }
   if(t.id==="conf-file"&&S.conf){ [...t.files].forEach(f=>{ if(f.size>20*1024*1024){ toast("Erro","Arquivo muito grande",f.name+" passa de 20 MB"); return; } S.conf.anexos.push({nome:f.name,tam:f.size,file:f}); }); render(); return; }
   if(t.dataset.conf&&S.conf){ S.conf[t.dataset.conf]=t.value; return; }
   if(t.dataset.hi){ S.homeInd.etapa=t.value; render(); return; }
@@ -195,6 +206,6 @@ document.addEventListener("submit",e=>{
   saveDB(); S.cli.edit=null; toast("Sucesso","Cliente salvo"); render();
 });
 document.addEventListener("keydown",e=>{ if(e.key!=="Escape") return;
-  if(S.conf) S.conf=null; else if(S.homeInd) S.homeInd=null; else if(S.menuAcoes) S.menuAcoes=false; else if(S.adminPanel) S.adminPanel=false; else if(S.navObras) S.navObras=false; else if(S.ag) S.ag=null; else if(S.popup) S.popup=null; else if(S.loc.modal) S.loc.modal=null; else if(S.popup) S.popup=null; else if(S.drawer) S.drawer=false; else if(S.nav) S.nav=false; else return; render(); });
+  if(S.laudoRec) S.laudoRec=null; else if(S.agdInfo) S.agdInfo=false; else if(S.conf) S.conf=null; else if(S.homeInd) S.homeInd=null; else if(S.menuAcoes) S.menuAcoes=false; else if(S.adminPanel) S.adminPanel=false; else if(S.navObras) S.navObras=false; else if(S.ag) S.ag=null; else if(S.popup) S.popup=null; else if(S.loc.modal) S.loc.modal=null; else if(S.popup) S.popup=null; else if(S.drawer) S.drawer=false; else if(S.nav) S.nav=false; else return; render(); });
 
 /* O início do app fica em main.js */

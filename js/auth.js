@@ -155,7 +155,7 @@ function usrDetalhe(){
       :`<button class="btn primary" data-act="usrsalvar">Desbloquear e salvar</button>`}</div>
     ${p.status!=="pendente"&&!eu?`<div class="usr-senha"><h3 class="h3" style="margin:0">Senha provisória</h3><span class="small muted">Defina uma senha e passe para a pessoa. No primeiro login com ela, o app pede para a pessoa criar uma senha própria.</span>
       ${S.usr.ultima&&S.usr.ultima.id===p.id?`<div class="auth-msg ok">Senha provisória definida: <b class="tnum" style="user-select:all">${esc(S.usr.ultima.senha)}</b> <button class="linkbtn" data-act="usrcopiar">Copiar</button><br><span style="font-weight:400">Passe para ${esc(p.nome.split(" ")[0])} por um canal seguro (WhatsApp, pessoalmente).</span></div>`:""}
-      <div class="row"><input class="inp" id="usr-senha" value="${esc(F.senha)}" placeholder="Nova senha" autocomplete="off" style="flex:1;min-width:160px"><button class="btn ghost" data-act="usrgerar">Gerar</button><button class="btn info" data-act="usrsenha">Definir senha</button></div></div>`:""}
+      <div class="row"><input class="inp" id="usr-senha" value="${esc(F.senha)}" placeholder="Nova senha" autocomplete="off" style="flex:1;min-width:144px"><button class="btn ghost" data-act="usrgerar">Gerar</button><button class="btn info" data-act="usrsenha">Definir senha</button></div></div>`:""}
   </section>`;
 }
 function gerarSenha(){ const L="abcdefghjkmnpqrstuvwxyz", N="23456789"; let s="Rottas-"; for(let i=0;i<3;i++) s+=L[Math.floor(Math.random()*L.length)]; for(let i=0;i<3;i++) s+=N[Math.floor(Math.random()*N.length)]; return s; }

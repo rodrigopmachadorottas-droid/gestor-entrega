@@ -65,7 +65,7 @@ const STORE_KEY="ge-demo-v1";
 let DB=null;
 function salvarLocal(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }catch(e){} }
 function carregarLocal(){
-  try{ const raw=localStorage.getItem(STORE_KEY); if(raw){ const d=JSON.parse(raw); if(d&&d.v===1){DB=d; return;} } }catch(e){}
+  try{ const raw=localStorage.getItem(STORE_KEY); if(raw){ const d=JSON.parse(raw); if(d&&d.v===1){DB=d; DB.laudos=DB.laudos||[]; return;} } }catch(e){}
   DB=gerarDadosTeste(); salvarLocal();
 }
 function nextIdLocal(t){ DB.seq[t]=(DB.seq[t]||0)+1; return DB.seq[t]; }

@@ -33,9 +33,11 @@ const IC={
   clip:sv('<path d="M20 11.5l-8.2 8.2a5 5 0 01-7-7L13 4.4a3.3 3.3 0 014.7 4.7l-8.2 8.2a1.7 1.7 0 01-2.4-2.4l7.5-7.5"/>'),
   logout:sv('<path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/>'),
   camera:sv('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
+  info:sv('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>'),
+  pdf:sv('<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.3";
+const VERSAO="v2.1.4";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -45,8 +47,8 @@ const S={conf:null,homeInd:null,adminPanel:false,simSel:"",menuAcoes:false,user:
   cli:{aba:"vinc",ubusca:"",filtro:"todas",und:null,q:"",novo:false,nform:{nome:"",telefone:"",email:""},busca:"",edit:null,form:{nome:"",telefone:"",email:""},del:false},hor:null,toasts:[],confirmReset:false,dark:false,locAba:"und"};
 const ME=()=>userByLogin(S.user);
 const OBRA=()=>obraById(S.obraId);
-function filtrosPadrao(u){ return {extras:can(u,"admin","obra","instalacoes"),f1:can(u,"admin","obra","instalacoes"),f2:can(u,"admin","obra","qualidade","rc"),f3:can(u,"admin","rc","financeiro"),blocos:[]}; }
-function fasesVisiveis(u){ return {extras:can(u,"admin","obra","instalacoes","qualidade"),f1:can(u,"admin","obra","instalacoes","qualidade"),f2:can(u,"admin","obra","qualidade","rc"),f3:can(u,"admin","obra","qualidade","rc","financeiro")}; }
+function filtrosPadrao(u){ return {extras:false,f1:can(u,"admin","obra","instalacoes"),f2:can(u,"admin","obra","qualidade","rc"),f3:can(u,"admin","rc","financeiro"),blocos:[]}; }
+function fasesVisiveis(u){ return {extras:can(u,"admin"),f1:can(u,"admin","obra","instalacoes","qualidade"),f2:can(u,"admin","obra","qualidade","rc"),f3:can(u,"admin","obra","qualidade","rc","financeiro")}; }
 function resetFiltros(){ const u=ME(); S.fil=filtrosPadrao(u); S.ind.fil=filtrosPadrao(u); S.ind.fil.blocos=[]; S.ind.ini=""; S.ind.fim=""; }
 
 function toast(tipo,txt,sub){ const id=Math.random(); S.toasts.push({id,tipo,txt,sub}); if(S.toasts.length>4) S.toasts.shift(); renderToasts(); setTimeout(()=>{S.toasts=S.toasts.filter(t=>t.id!==id); renderToasts();},3800); }
@@ -77,7 +79,7 @@ function telaHome(){
   return `<div class="home-z"><div class="home-top"><div class="wrap"><b>Controle das Unidades | Excelência Operacional</b><span class="home-ola"><b>${saudacao()}, ${esc(u.nome.split(" ")[0])}!</b>${topoAcoes()}</span></div></div>
   <section class="home-hero">
     <button class="logo-btn" data-act="adminpanel" aria-label="Gestor de Entrega"><img class="logo" src="${isDark()?LOGOS.branca:LOGOS.preta}" alt="Gestor de Entrega"></button>
-    ${can(u,"admin")?`<button class="iconbtn home-dash ${S.homeInd?"on":""}" data-act="homeind" aria-label="Indicadores gerais das obras" title="Indicadores gerais">${io("indicadores")}</button>`:""}
+    ${podeIndGerais(u)?`<button class="iconbtn home-dash ${S.homeInd?"on":""}" data-act="homeind" aria-label="Indicadores gerais das obras" title="Indicadores gerais">${io("indicadores")}</button>`:""}
   </section>
   <main class="home-body wrap"><h2>Obras</h2><div class="obras">
   ${obras.map(o=>{const ok=acesso(o); return `<button class="obra" data-act="obra" data-id="${o.id}" ${ok?"":"disabled"} aria-label="${esc(o.nome)}">
@@ -106,6 +108,8 @@ function desenharFotos(){
   });
 }
 
+function obrasDoUsuario(u){ return DB.obras.filter(o=>can(u,"admin")||(", "+o.usuarios+", ").includes(", "+u.login+", ")); }
+function podeIndGerais(u){ return obrasDoUsuario(u).length>1&&opcoesGerais(u).length>0; }
 /* ================= MENU LATERAL ================= */
 function menuLateral(){
   if(!S.nav) return "";
@@ -115,8 +119,8 @@ function menuLateral(){
   return `<div class="scrim" data-act="navclose"></div><aside class="sidebar" aria-label="Menu">
     <div class="sb-head"><button class="logo-btn" data-act="home" aria-label="Voltar para as obras"><img src="${isDark()?LOGOS.branca:LOGOS.preta}" alt="Gestor de Entrega"></button><button data-act="ir" data-to="versoes">${VERSAO}</button></div>
     <nav class="sb-nav">
-      <div class="sb-sec">EXECUÇÃO</div>${it("unidades","key","Unidades")}${it("areas","hammer","Áreas Comuns")}
-      <div class="sb-sec">GESTÃO À VISTA</div>${it("indicadores","chart","Indicadores")}${it("agenda","calendar","Agenda",can(u,"admin","obra","qualidade","rc"))}
+      <div class="sb-sec">EXECUÇÃO</div>${it("unidades","key","Unidades")}${it("areas","hammer","Áreas Comuns",DB.areas.some(a=>a.id_obra===S.obraId))}
+      <div class="sb-sec">GESTÃO À VISTA</div>${it("indicadores","chart","Indicadores")}${it("agenda","calendar","Agenda",can(u,"admin","obra","qualidade","rc"))}${itemLaudos()}
       ${cfg?`<div class="sb-sec">CONFIGURAÇÕES</div>${cfg}`:""}
     </nav>
     <div class="sb-foot">
@@ -148,6 +152,12 @@ function painelAdmin(){
 }
 
 /* ================= TELA: UNIDADES ================= */
+// "101" acha em todos os blocos; "A101", "a 101" ou "a-101" acha só no Bloco A
+function bateBusca(x,q){
+  if(!q) return true; if(x.unidade.toLowerCase().includes(q)) return true;
+  const m=/^([a-z])\s*-?\s*(\d+)$/i.exec(q); if(!m) return false;
+  const bloco=nivel1Nome(x).toLowerCase(); return (bloco.endsWith(" "+m[1].toLowerCase())||bloco===m[1].toLowerCase())&&x.unidade.toLowerCase().includes(m[2]);
+}
 function unidadesObra(){ return DB.unidades.filter(u=>u.id_obra===S.obraId); }
 function ordenarUnidades(arr){ return arr.sort((a,b)=>nivel1Nome(a).localeCompare(nivel1Nome(b))||((a.nivel_2||0)-(b.nivel_2||0))||(numUnd(a.unidade)-numUnd(b.unidade))); }
 function blocosObra(){ return DB.locais.filter(l=>l.id_obra===S.obraId).map(l=>l.nivel1).sort(); }
@@ -165,7 +175,7 @@ function colunasUnidades(){
 function telaUnidades(){
   const cfg=OBRA().config, f=S.fil, casa=cfg.tipo==="casa";
   const q=S.busca.trim().toLowerCase();
-  const us=ordenarUnidades(unidadesObra().filter(x=>(!q||x.unidade.toLowerCase().includes(q))&&(!f.blocos.length||f.blocos.includes(nivel1Nome(x)))));
+  const us=ordenarUnidades(unidadesObra().filter(x=>bateBusca(x,q)&&(!f.blocos.length||f.blocos.includes(nivel1Nome(x)))));
   const C=colunasUnidades(), podeLote=can(ME(),"obra")&&f.f1;
   const nFil=(f.extras?0:1)+(f.f1?0:1)+(f.f2?0:1)+(f.f3?0:1)+(f.blocos.length?1:0);
   const lote=S.lote.on?`<div class="lotebar"><b>Liberação em lote</b><span class="small">Toque nas células vazias de teste para marcar. ${S.lote.q.length} selecionada(s).</span><span class="spacer"></span>
@@ -174,14 +184,14 @@ function telaUnidades(){
   const acoes=[podeLote?`<button data-act="loteon">${IC.key}<span><b>Liberar testes em lote</b><small>Marque várias células vazias e libere de uma vez</small></span></button>`:""].filter(Boolean);
   const menu=acoes.length?`<div class="dd-wrap"><button class="iconbtn" data-act="menuacoes" aria-label="Mais ações" aria-expanded="${!!S.menuAcoes}">${IC.dots}</button>${S.menuAcoes?`<div class="dd-scrim" data-act="menuacoes"></div><div class="dropdown" role="menu">${acoes.join("")}</div>`:""}</div>`:"";
   const fz=casa?["fz fz1","","fz fz3 fzl"]:["fz fz1","fz fz2","fz fz3 fzl"];
-  const body=us.length?`<div class="tablewrap"><table class="grid"><thead><tr><th class="${fz[0]}">${casa?"Quadra":"Bloco"}</th>${casa?"":`<th class="${fz[1]}">Pav</th>`}<th class="${fz[2]}" ${casa?'style="left:var(--fz2)"':""}>${casa?"Casa":"Und"}</th>${C.map(c=>`<th>${esc(c.h)}</th>`).join("")}</tr></thead><tbody>
-    ${us.map(x=>`<tr data-act="${S.lote.on?"":"abrirund"}" data-id="${x.id}"><td class="${fz[0]}">${esc(nivel1Nome(x).replace(/^(Bloco|Quadra) /,""))}</td>${casa?"":`<td class="${fz[1]}">${esc(nivel2Nome(x).replace(" Pavimento",""))}</td>`}<td class="${fz[2]}" ${casa?'style="left:var(--fz2)"':""}><b>${esc(x.unidade.replace(/^(AP|CASA) /,""))}</b></td>
+  const body=us.length?`<div class="tablewrap"><table class="grid ${casa?"casa":""}"><thead><tr><th class="${fz[0]}">${casa?"Quadra":"Bloco"}</th>${casa?"":`<th class="${fz[1]}">Pav</th>`}<th class="${fz[2]}">${casa?"Casa":"Und"}</th>${C.map(c=>`<th>${esc(c.h)}</th>`).join("")}</tr></thead><tbody>
+    ${us.map(x=>`<tr data-act="${S.lote.on?"":"abrirund"}" data-id="${x.id}"><td class="${fz[0]}">${esc(nivel1Nome(x).replace(/^(Bloco|Quadra) /,""))}</td>${casa?"":`<td class="${fz[1]}">${esc(nivel2Nome(x).replace(" Pavimento",""))}</td>`}<td class="${fz[2]}"><b>${esc(x.unidade.replace(/^(AP|CASA) /,""))}</b></td>
       ${C.map(c=>{const v=c.v(x)||""; if(c.plain) return `<td class="${c.l?"l":""}">${esc(v)}</td>`;
         const q=S.lote.on&&c.teste&&S.lote.q.some(z=>z.id===x.id&&z.col===c.col);
         const clic=S.lote.on&&c.teste&&blank(v)?` data-act="lotecell" data-id="${x.id}" data-col="${c.col}" style="cursor:copy"`:"";
         return `<td class="c-st ${q?"queued":stClass(v)}"${clic}>${q?"Liberar":esc(v)}</td>`;}).join("")}</tr>`).join("")}
   </tbody></table></div>`:`<div class="panel empty"><b>Nenhuma unidade encontrada</b><span>Mude o filtro ou a busca e tente de novo.</span></div>`;
-  return topbar("Unidades",buscaBox("busca",S.busca,"Pesquisar unidade")+menu+filtroBtn(nFil))+`<main class="screen">${lote}${body}</main>`+drawerUnidades();
+  return topbar("Unidades",buscaBox("busca",S.busca,OBRA().config.tipo==="casa"?"Pesquisar casa":"Pesquisar (ex.: 101 ou A101)")+menu+filtroBtn(nFil))+`<main class="screen unid">${lote}${body}</main>`+drawerUnidades();
 }
 function blocosDD(sel,act){
   const casa=OBRA().config.tipo==="casa", L=blocosObra(), txt=sel.length?sel.join(", "):"Selecione";
@@ -204,7 +214,7 @@ function drawerUnidades(){
 function popupUnidade(){
   const x=DB.unidades.find(u=>u.id===S.popup.id), u=ME();
   const secs=secoesUnidade(x,u,S.fil);
-  const fin=x.financeiro_status?`<div class="row" style="margin-top:8px">${pill("Financeiro "+x.financeiro_status).replace("s-neutral","s-"+(x.financeiro_status==="Liberado"?"ok":x.financeiro_status==="Bloqueado"?"bad":"warn"))}<span class="muted">${esc(x.financeiro_motivo)}</span></div>`:"";
+  const fin=x.financeiro_status?`<div class="row" style="margin-top:7.2px">${pill("Financeiro "+x.financeiro_status).replace("s-neutral","s-"+(x.financeiro_status==="Liberado"?"ok":x.financeiro_status==="Bloqueado"?"bad":"warn"))}<span class="muted">${esc(x.financeiro_motivo)}</span></div>`:"";
   if(S.ag&&S.ag.id===x.id) return `<div class="modal" role="dialog" aria-modal="true" aria-label="Agendar vistoria"><div class="scrim" data-act="fecharpop"></div><div class="box tall">${agendaTab()}</div></div>`;
   return `<div class="modal" role="dialog" aria-modal="true" aria-label="Unidade ${esc(x.unidade)}"><div class="scrim" data-act="fecharpop"></div><div class="box tall">
     <div class="mhead"><div class="t"><div class="crumb">${esc(nivel1Nome(x))}${nivel2Nome(x)?" / "+esc(nivel2Nome(x)):""} / <b>${esc(x.unidade)}</b></div>${fin}</div>
@@ -216,7 +226,7 @@ function secaoHTML(s,ctx){
   const moves=s.moves.length?`<ul class="moves">${s.moves.map(m=>{const [c,i]=MOV_IC[m.tipo]||MOV_IC.neutral; return `<li><span class="ic" style="background:${c}">${i}</span><div><b class="tnum">${fmtDT(m.data)}</b> - ${esc(nomeUsuario(m.autor))} ${esc(m.txt)}</div>${m.obs?`<div class="obs">${esc(m.obs)}</div>`:""}${m.checklist?ckResumo(m.checklist):""}${m.anexos&&m.anexos.length?`<div class="obs anx">${IC.clip}${m.anexos.map(a=>a.path?`<button class="linkbtn" data-act="anexo" data-path="${esc(a.path)}">${esc(a.nome)}</button>`:esc(a.nome)).join(", ")}</div>`:""}${m.assinatura?`<div class="obs"><img class="sigimg" src="${m.assinatura}" alt="Assinatura do cliente"></div>`:m.temAss?`<div class="obs"><button class="linkbtn" data-act="verass" data-id="${m.tid}">Ver assinatura do cliente</button></div>`:""}</li>`;}).join("")}</ul>`:"";
   let acts="";
   if(s.acts.length) acts=`<div class="acts">${s.acts.map(a=>`<button class="btn ${a.k} btn-ic" data-act="abrirconf" data-ctx="${ctx}" data-a="${a.a}" data-k="${k}">${ACAO_IC[a.a]||""}${esc(a.l)}</button>`).join("")}</div>`;
-  return `<section class="stagebox"><div class="sh"><b>${esc(s.titulo)}</b>${pill(s.status)}</div>${moves}${s.aviso?`<div class="small muted" style="padding:0 14px 10px">${esc(s.aviso)}</div>`:""}${acts}</section>`;
+  return `<section class="stagebox"><div class="sh"><b>${esc(s.titulo)}</b>${pill(s.status)}</div>${moves}${s.aviso?`<div class="small muted" style="padding:0 12.6px 9px">${esc(s.aviso)}</div>`:""}${acts}</section>`;
 }
 
 /* ================= POPUP DE AGENDAMENTO ================= */
@@ -228,25 +238,26 @@ function agendaTab(){
   const nv=repN(x.rep_vistoria_cliente)||1;
   let slots="";
   if(A.dia){ const dk=DIA_KEY[A.dia.getDay()]; const hs=dk?horariosDia(S.obraId,dk):[];
-    slots=hs.length?hs.map(h=>{const oc=ocupacao(S.obraId,fmtData(A.dia)+" "+h.Horas,x.id), cheio=oc>=h.Pessoas;
-      return `<button class="${A.hora===h.Horas?"sel":""}" data-act="aghora" data-h="${h.Horas}" ${cheio?"disabled":""} aria-label="${h.Horas}, ${oc} de ${h.Pessoas} vagas ocupadas">${h.Horas} - ${oc}/${h.Pessoas}</button>`;}).join("")
+    slots=hs.length?hs.map(h=>{const oc=ocupacao(S.obraId,fmtData(A.dia)+" "+h.Horas,x.id), cheio=oc>=h.Pessoas, cedo=!admin&&!antecedenciaOk(fmtData(A.dia)+" "+h.Horas);
+      return `<button class="${A.hora===h.Horas?"sel":""}" data-act="aghora" data-h="${h.Horas}" ${cheio||cedo?"disabled":""} title="${cedo?"Precisa de 24 horas de antecedência":""}" aria-label="${h.Horas}, ${oc} de ${h.Pessoas} vagas ocupadas">${h.Horas} - ${oc}/${h.Pessoas}</button>`;}).join("")
       :`<span class="small muted">A obra não tem horários neste dia. Configure em Horários.</span>`; }
   else slots=`<span class="small muted">Escolha um dia no calendário.</span>`;
   const finCls=x.financeiro_status==="Liberado"?"ok":x.financeiro_status==="Bloqueado"?"bad":"warn";
   return `<div class="ag">
-    <div class="ag-l"><button class="iconbtn" data-act="agfechar" aria-label="Voltar para as tarefas da unidade" style="margin-left:-8px">${IC.back}</button>
+    <div class="ag-l"><button class="iconbtn" data-act="agfechar" aria-label="Voltar para as tarefas da unidade" style="margin-left:-7.2px">${IC.back}</button>
       <div class="muted" style="font-weight:700">${esc(nivel1Nome(x))}${nivel2Nome(x)?" / "+esc(nivel2Nome(x)):""}</div><div class="und">${esc(x.unidade)}</div>
       ${c?`<div class="line">${IC.user}${esc(tituloCase(c.nome))}</div><div class="line">${IC.phone}<span class="tnum">${esc(fmtTel(c.telefone))}</span></div><div class="line">${IC.at}${esc(c.email)}</div>`:""}
       ${x.prioridade?`<div class="line" style="color:var(--primary)">${IC.bookmark}<b>Prioridade: ${esc(x.prioridade)}</b></div>`:""}
-      ${x.financeiro_status?`<div><span class="pill s-${finCls}">Financeiro ${esc(x.financeiro_status)}</span><div class="small muted" style="margin-top:6px">${esc(x.financeiro_motivo)}</div></div>`:""}
+      ${x.financeiro_status?`<div><span class="pill s-${finCls}">Financeiro ${esc(x.financeiro_status)}</span><div class="small muted" style="margin-top:5.4px">${esc(x.financeiro_motivo)}</div></div>`:""}
       <span class="spacer"></span><span class="pill s-neutral" style="align-self:flex-start;background:var(--surface)">${nv}ª Vistoria</span></div>
     <div class="ag-r"><div class="cal"><b style="font-size:1.1rem">Escolha uma data:</b>
         <div class="cal-head"><button class="iconbtn" data-act="agmes" data-d="-1" aria-label="Mês anterior">${IC.chevL}</button><b>${esc(mesNome(m))}</b><button class="iconbtn" data-act="agmes" data-d="1" aria-label="Próximo mês">${IC.chevR}</button></div>
         <div class="cal-grid"><span class="wd">dom</span><span class="wd">seg</span><span class="wd">ter</span><span class="wd">qua</span><span class="wd">qui</span><span class="wd">sex</span><span class="wd">sáb</span>
         ${dias.map(d=>{const fora=d.getMonth()!==m.getMonth(), passado=d<hoje&&!admin, sel=A.dia&&sameDay(d,A.dia);
-          return fora?"<span></span>":`<button class="${sel?"sel":""} ${sameDay(d,hoje)?"today":""}" data-act="agdia" data-t="${d.getTime()}" ${passado||d.getDay()===0?"disabled":""}>${d.getDate()}</button>`;}).join("")}</div></div>
-      <div class="slots"><b class="muted">Horários disponíveis</b>${slots}</div>
+          return fora?"<span></span>":`<button class="${sel?"sel":""} ${sameDay(d,hoje)?"today":""}" data-act="agdia" data-t="${d.getTime()}" ${passado||d.getDay()===0||(!admin&&new Date(d.getFullYear(),d.getMonth(),d.getDate()+1).getTime()<=Date.now()+864e5)?"disabled":""}>${d.getDate()}</button>`;}).join("")}</div></div>
+      <div class="slots"><b class="muted">Horários disponíveis</b>${slots}${admin?"":`<span class="small muted">O agendamento precisa de pelo menos 24 horas de antecedência.</span>`}</div>
       <div class="row" style="grid-column:1/-1"><input class="inp" id="ag-obs" placeholder="Observações" style="flex:1"><button class="btn primary" data-act="agsalvar">Salvar</button></div>
     </div></div>`;
 }
+const antecedenciaOk=str=>{ const d=parseAg(str); return !!d&&d.getTime()>=Date.now()+864e5; };
 const mesNome=d=>{const s=d.toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).replace(" de "," "); return s.charAt(0).toUpperCase()+s.slice(1);};

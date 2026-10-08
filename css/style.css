@@ -173,9 +173,10 @@ table.grid tbody tr{cursor:pointer}
 table.grid tbody tr:hover td{box-shadow:inset 0 0 0 999px var(--hover)}
 table.grid .fz{position:sticky;background:var(--surface);z-index:1}
 table.grid th.fz{z-index:3;background:var(--surface-2)}
-table.grid .fz1{left:0;min-width:var(--fz1);max-width:var(--fz1)}
-table.grid .fz2{left:var(--fz1);min-width:var(--fz2);max-width:var(--fz2)}
-table.grid .fz3{left:calc(var(--fz1) + var(--fz2));min-width:var(--fz3);max-width:var(--fz3)}
+table.grid{--fzx:0px}
+table.grid .fz1{left:var(--fzx);min-width:var(--fz1);max-width:var(--fz1)}
+table.grid .fz2{left:calc(var(--fzx) + var(--fz1));min-width:var(--fz2);max-width:var(--fz2)}
+table.grid .fz3{left:calc(var(--fzx) + var(--fz1) + var(--fz2));min-width:var(--fz3);max-width:var(--fz3)}
 table.grid .fzl{box-shadow:2px 0 0 var(--border-2)}
 table.grid tbody tr:hover td.fzl{box-shadow:inset 0 0 0 999px var(--hover),2px 0 0 var(--border-2)}
 table.grid td.c-st{min-width:140px;font-weight:700}
@@ -230,7 +231,7 @@ html.lock{overflow:hidden}
 .tile{cursor:pointer}
 .tile:hover{box-shadow:inset 0 0 0 99px rgba(0,0,0,.16)}
 :root[data-theme="dark"] .tile:hover{box-shadow:inset 0 0 0 99px rgba(255,255,255,.14)}
-.mhead{display:flex;gap:12px;align-items:flex-start;padding:16px 18px 12px;border-bottom:1px solid var(--border)}
+.mhead{display:flex;gap:12px;align-items:center;padding:16px 18px 12px;border-bottom:1px solid var(--border)}
 .mhead .t{flex:1;min-width:0}
 .mhead .crumb{font-size:1.5rem;color:var(--fg-3);font-weight:700;line-height:1.2}
 .mhead .crumb b{color:var(--fg);font-weight:900}
@@ -748,3 +749,39 @@ table.kpi.gerais th.lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white
   .home-top b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .home-dash{top:10px;right:10px}
 }
+
+/* ================= v2.1.4 ================= */
+table.grid.casa{--fz1:96px}
+table.grid.casa .fz3{left:calc(var(--fzx) + var(--fz1))}
+@media (min-width:861px){
+  /* margens fixas ao rolar a página: faixa de cima e da esquerda continuam visíveis */
+  .screen.unid table.grid{--fzx:16px}
+  .screen.unid table.grid th{top:calc(var(--tb) + 18px + env(safe-area-inset-top,0px))}
+  .screen.unid::before{content:"";position:fixed;left:0;right:0;top:calc(var(--tb) + env(safe-area-inset-top,0px));height:18px;background:var(--bg);z-index:5}
+  .screen.unid::after{content:"";position:fixed;left:0;top:0;bottom:0;width:16px;background:var(--bg);z-index:5}
+}
+@media (max-width:860px){ table.grid.casa{--fz1:62px} }
+.hi-sel{flex-direction:row;align-items:center;gap:8px;font-size:.9rem}
+table.kpi.gerais td.z{color:var(--fg-3);opacity:.55}
+table.kpi tfoot th,table.kpi tfoot td{background:var(--input);color:var(--fg)}
+table.kpi.gerais tfoot td.z{color:var(--fg-3)}
+.tb-btn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--top-fg);background:transparent;color:var(--top-fg);border-radius:8px;padding:6px 12px;font:inherit;font-weight:700;font-size:.9rem;cursor:pointer;white-space:nowrap}
+.tb-btn:hover{background:rgba(255,255,255,.16)}
+.tb-btn svg{width:18px;height:18px}
+@media (max-width:600px){ .tb-btn span{display:none} .tb-btn{padding:6px 8px} }
+.ag-pop{position:fixed;top:calc(var(--tb) + 8px + env(safe-area-inset-top,0px));right:12px;z-index:46;background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:14px 16px;display:flex;flex-direction:column;gap:8px;width:min(300px,calc(100vw - 24px))}
+.ag-pop span{display:flex;align-items:center}
+.vcard{border:0;text-align:left;font:inherit;color:inherit;width:100%;cursor:pointer}
+.vcard:hover{box-shadow:inset 0 0 0 2px var(--primary-l)}
+.vcard .tag.st-warn{background:var(--warn-s)}
+.vcard .tag.st-ok{background:var(--ok-s)}
+.vcard .tag.st-bad{background:var(--bad-s)}
+.vcard .tag.st-cx{background:var(--neutral-s)}
+.engbox{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--border);padding-top:14px}
+.engbox .row{flex-wrap:wrap;gap:8px}
+.laudos-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.laudo{display:flex;flex-direction:column;gap:10px}
+.laudo-main{border:0;background:none;text-align:left;font:inherit;color:inherit;display:flex;flex-direction:column;gap:4px;padding:0;cursor:pointer}
+.laudo-main svg{width:14px;height:14px;vertical-align:-2px;margin-right:4px}
+.laudo .btn{align-self:flex-start}
+.t-bad{color:var(--bad-t)}

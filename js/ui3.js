@@ -37,9 +37,11 @@ function confirmDialog(){
       <div class="cklist">${CHECKLIST_QUALIDADE.map((it,i)=>`<div class="ckrow"><span>${esc(it)}</span><div class="seg ck" role="group" aria-label="${esc(it)}">${CK_OPCOES.map(([v,l])=>`<button class="${C.ck[i]===v?"on ck-"+v:""}" data-act="ckset" data-i="${i}" data-v="${v}">${l}</button>`).join("")}</div></div>`).join("")}</div>
       <span class="small muted tnum">${feitos} de ${CHECKLIST_QUALIDADE.length} itens marcados</span>
       ${C.assinatura?`<div class="sigwrap"><div class="row"><b>Assinatura do cliente${C.cliente?` · ${esc(C.cliente)}`:""}</b><span class="spacer"></span><button class="btn sm ghost" data-act="siglimpar">Limpar</button></div>
-        <canvas id="sig" class="sig" aria-label="Área para o cliente assinar"></canvas><span class="small muted">Peça para o cliente assinar com o dedo ou com a caneta do tablet.</span></div>`:""}`;
+        <canvas id="sig" class="sig" aria-label="Área para o cliente assinar"></canvas><span class="small muted">Peça para o cliente assinar com o dedo ou com a caneta do tablet.</span></div>
+      <div class="engbox"><div class="row"><b>O cliente veio com engenheiro ou responsável técnico?</b><span class="spacer"></span><div class="seg"><button class="${C.eng?"":"on"}" data-act="engsim" data-v="0">Não</button><button class="${C.eng?"on":""}" data-act="engsim" data-v="1">Sim</button></div></div>
+        ${C.eng?`<div class="field"><label for="conf-eng">Nome do engenheiro (opcional)</label><input class="inp" id="conf-eng" data-conf="engNome" value="${esc(C.engNome||"")}" placeholder="Ex.: Eng. João Silva"></div><span class="small muted">Fica um laudo pendente de envio, que o RC acompanha em Laudos.</span>`:""}</div>`:""}`;
   } else {
-    body=`${C.data?`<div class="field"><label for="conf-data">Data da vistoria</label><input type="date" class="inp" id="conf-data" data-conf="dt" value="${C.dt}" style="max-width:220px"></div>`:""}
+    body=`${C.data?`<div class="field"><label for="conf-data">Data da vistoria</label><input type="date" class="inp" id="conf-data" data-conf="dt" value="${C.dt}" style="max-width:198px"></div>`:""}
       <div class="obsbox"><textarea id="conf-obs" data-conf="obs" placeholder="Observação (opcional)" rows="4">${esc(C.obs)}</textarea>
       ${C.anexo?`<div class="anxarea">${C.anexos.length?`<ul>${C.anexos.map((a,i)=>`<li>${IC.clip}<span>${esc(a.nome)}</span><span class="muted small">${Math.max(1,Math.round(a.tam/1024))} KB</span><button class="x" data-act="anxdel" data-i="${i}" aria-label="Remover ${esc(a.nome)}">×</button></li>`).join("")}</ul>`:`<span>Você não anexou nada, mas pode fazer isso se precisar.</span>`}
         <label class="anxbtn">${IC.clip}Anexar arquivos<input type="file" id="conf-file" multiple hidden></label></div>`:""}</div>`;
@@ -78,6 +80,7 @@ function confirmarAcao(){
   if(C.data){ if(!C.dt){ toast("Erro","Escolha a data da vistoria"); return; } const [y,m,d]=C.dt.split("-"); ag=`${d}/${m}/${y}`; }
   const o={autor:S.user,obs:C.motivos?C.mot:C.obs.trim(),anexos:C.anexo?C.anexos:[],agendamento:ag};
   if(C.checklist){ o.checklist=CHECKLIST_QUALIDADE.map((item,i)=>({item,r:C.ck[i]||"ok"})); o.obs=""; if(C.assinatura) o.assinatura=C.sig; }
+  if(C.assinatura&&C.eng) o.laudo={engenheiro:(C.engNome||"").trim()};
   if(C.ctx==="und"){ const x=DB.unidades.find(u=>u.id===S.popup.id), antes=x.sub_etapa; executarAcao(x,C.a,C.col,o);
     toast("Sucesso",`${C.label}: ${x.unidade}`, x.sub_etapa!==antes?`Unidade passou para ${ETAPA[x.sub_etapa].n}`:""); }
   else { const a=DB.areas.find(z=>z.id===S.popup.id); executarAcaoAC(a,C.a,C.col,o); toast("Sucesso",`${C.label}: ${a.descricao}`); }
@@ -85,30 +88,32 @@ function confirmarAcao(){
 }
 
 /* ================= INDICADORES GERAIS (tela inicial, admin) ================= */
-function opcoesGerais(){
-  return [{id:"lib",nome:"Liberação de Testes",tipo:"lib",coluna:""},
-    ...TESTES.map(t=>({id:t.col,nome:t.nome,tipo:"rep",coluna:t.col,teste:t.k})),
-    {id:"fin",nome:"Finalizando Unidade",tipo:"fin",coluna:""},{id:"rep_vistoria_at",nome:"Vistoria Qualidade",tipo:"rep",coluna:"rep_vistoria_at"},
-    {id:"rep_vistoria_previa",nome:"Vistoria Prévia",tipo:"rep",coluna:"rep_vistoria_previa",previa:1},
-    {id:"agendamento",nome:"Agendamento com Cliente",tipo:"ag",coluna:"agendamento"},{id:"rep_vistoria_cliente",nome:"Vistoria Cliente",tipo:"rep",coluna:"rep_vistoria_cliente"},
-    {id:"corr",nome:"Correções de Obra",tipo:"corr",coluna:""}];
+function opcoesGerais(u){
+  const todas=[{id:"lib",nome:"Liberação de Testes",tipo:"lib",coluna:"",fase:"f1"},
+    ...TESTES.map(t=>({id:t.col,nome:t.nome,tipo:"rep",coluna:t.col,teste:t.k,fase:"f1"})),
+    {id:"fin",nome:"Finalizando Unidade",tipo:"fin",coluna:"",fase:"f1"},{id:"rep_vistoria_at",nome:"Vistoria Qualidade",tipo:"rep",coluna:"rep_vistoria_at",fase:"f2"},
+    {id:"rep_vistoria_previa",nome:"Vistoria Prévia",tipo:"rep",coluna:"rep_vistoria_previa",previa:1,fase:"f2"},
+    {id:"agendamento",nome:"Agendamento com Cliente",tipo:"ag",coluna:"agendamento",fase:"f2"},{id:"rep_vistoria_cliente",nome:"Vistoria Cliente",tipo:"rep",coluna:"rep_vistoria_cliente",fase:"f2"},
+    {id:"corr",nome:"Correções de Obra",tipo:"corr",coluna:"",fase:"f2"}];
+  const v=fasesVisiveis(u||ME()); return todas.filter(o=>v[o.fase]);
 }
 function popupIndGerais(){
   const ops=opcoesGerais(), op=ops.find(o=>o.id===S.homeInd.etapa)||ops[0], leg=LEGENDAS[op.tipo];
+  const cel=(n,t)=>`<td class="${n?"":"z"}">${n}${n&&t?` <span class="pct">${Math.round(n/t*100)}%</span>`:""}</td>`;
   const corr=new Set(DB.tarefas.filter(t=>t.acao==="corrigir"&&t.etapa_antiga===7).map(t=>t.id_unidade));
   const tot=Object.fromEntries(leg.map(l=>[l,0])); let totAll=0;
-  const rows=[...DB.obras].sort((a,b)=>a.ordem-b.ordem).map(o=>{
+  const rows=obrasDoUsuario(ME()).sort((a,b)=>a.ordem-b.ordem).map(o=>{
     const aplica=(!op.teste||o.config.testes.includes(op.teste))&&(!op.previa||o.config.previa);
     const us=DB.unidades.filter(u=>u.id_obra===o.id);
     if(!aplica) return `<tr><th class="lbl">${esc(o.nome)}</th><td colspan="${leg.length+1}" class="na">Não se aplica a esta obra</td></tr>`;
     const st=us.map(u=>statusInd(u,op,corr)); totAll+=us.length;
-    return `<tr><th class="lbl">${esc(o.nome)}</th>${leg.map(l=>{const n=st.filter(s=>s===l).length; tot[l]+=n; return `<td>${n}${n&&us.length?` <span class="pct">${Math.round(n/us.length*100)}%</span>`:""}</td>`;}).join("")}<td class="tot">${us.length}</td></tr>`;
+    return `<tr><th class="lbl">${esc(o.nome)}</th>${leg.map(l=>{const n=st.filter(s=>s===l).length; tot[l]+=n; return cel(n,us.length);}).join("")}<td class="tot">${us.length}</td></tr>`;
   }).join("");
   return `<div class="modal" role="dialog" aria-modal="true" aria-label="Indicadores gerais"><div class="scrim" data-act="homeind"></div><div class="box tall">
-    <div class="mhead"><div class="t"><b class="conf-t">Indicadores gerais</b><div class="small muted">Unidades de todas as obras por status na etapa escolhida</div></div>
-      <label class="hi-sel"><span>Etapa</span><select class="inp" id="hi-etapa" data-hi="1">${ops.map(o=>`<option value="${o.id}" ${o.id===op.id?"selected":""}>${esc(o.nome)}</option>`).join("")}</select></label>
+    <div class="mhead"><div class="t"><b class="conf-t">Indicadores Gerais (status atual)</b><div class="small muted">Como as unidades estão hoje, por obra, na etapa escolhida</div></div>
+      <label class="hi-sel"><span>Etapa:</span><select class="inp" id="hi-etapa" data-hi="1">${ops.map(o=>`<option value="${o.id}" ${o.id===op.id?"selected":""}>${esc(o.nome)}</option>`).join("")}</select></label>
       <button class="iconbtn" data-act="homeind" aria-label="Fechar">${IC.close}</button></div>
     <div class="mbody">
     <div class="gerais-wrap"><table class="kpi gerais"><colgroup><col class="c-obra">${leg.map(()=>"<col>").join("")}<col class="c-tot"></colgroup><thead><tr><th class="lbl-h">Obra</th>${leg.map(l=>`<th style="background:${corInd(l)}">${esc(l)}</th>`).join("")}<th class="tot">Unidades</th></tr></thead>
-    <tbody>${rows}</tbody><tfoot><tr><th>TOTAL</th>${leg.map(l=>`<td>${tot[l]}${tot[l]&&totAll?` (${Math.round(tot[l]/totAll*100)}%)`:""}</td>`).join("")}<td>${totAll}</td></tr></tfoot></table></div></div></div></div>`;
+    <tbody>${rows}</tbody><tfoot><tr><th>TOTAL</th>${leg.map(l=>`<td class="${tot[l]?"":"z"}">${tot[l]}${tot[l]&&totAll?` (${Math.round(tot[l]/totAll*100)}%)`:""}</td>`).join("")}<td>${totAll}</td></tr></tfoot></table></div></div></div></div>`;
 }

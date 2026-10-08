@@ -57,7 +57,9 @@ function executarAcao(u,acao,col,o){
     etapa_antiga:old,etapa_nova:u.sub_etapa,obs:o.obs||"",repeticao:rep,coluna:col,autor:o.autor,data:(o.data||new Date()).toISOString(),agendamento:tAg};
   if(o.anexos&&o.anexos.length) t.anexos=o.anexos; if(o.checklist) t.checklist=o.checklist; if(o.assinatura) t.assinatura=o.assinatura;
   DB.tarefas.push(t);
-  aoAcao({tipo:"unidade",reg:u,acao,col,antes,depois:{...p,sub_etapa:u.sub_etapa},tarefa:t});
+  let laudo=null;
+  if(o.laudo&&col==="rep_vistoria_cliente"){ DB.laudos=DB.laudos||[]; laudo={id:nextId("laudos"),id_obra:u.id_obra,id_unidade:u.id,id_tarefa:t.id,engenheiro:o.laudo.engenheiro||"",status:"pendente",criado_em:t.data,criado_por:o.autor,recebido_em:null,recebido_por:null,obs:""}; DB.laudos.push(laudo); }
+  aoAcao({tipo:"unidade",reg:u,acao,col,antes,depois:{...p,sub_etapa:u.sub_etapa},tarefa:t,laudo:laudo?{engenheiro:laudo.engenheiro}:null,laudoLocal:laudo});
   return t;
 }
 
@@ -159,7 +161,7 @@ function secoesUnidade(u,user,fases){
     if(has(v,"Pendente")&&agendado&&can(user,"qualidade","obra")){ acts.push({a:"aprovar",l:"Aprovar",k:"ok"}); acts.push({a:"reprovar",l:"Reprovar",k:"bad"}); }
     if(has(v,"Reprovado")&&can(user,"obra")) acts.push({a:"corrigir",l:"Corrigir",k:"primary"});
     const mv=T.filter(t=>t.coluna==="rep_vistoria_cliente"||(t.coluna==="agendamento"&&t.acao==="agendar")).map(t=>t.coluna==="agendamento"?mov(t,"info",`agendou a ${t.repeticao}ª vistoria com o cliente para ${t.agendamento}.`):movVist(t));
-    S.push({key:"rep_vistoria_cliente",col:"rep_vistoria_cliente",titulo:"Vistoria do Cliente",status:v,moves:mv,acts,aviso:has(v,"Pendente")&&!agendado?"Aguardando agendamento pelo RC.":""});
+    S.push({key:"rep_vistoria_cliente",col:"rep_vistoria_cliente",titulo:"Vistoria do Cliente",status:v,moves:mv,acts,aviso:[has(v,"Pendente")&&!agendado?"Aguardando agendamento pelo RC.":"",...(DB.laudos||[]).filter(L=>L.id_unidade===u.id).map(L=>L.status==="pendente"?`Laudo do engenheiro (${L.engenheiro||"responsável do cliente"}) pendente de envio desde ${fmtData(new Date(L.criado_em))}.`:`Laudo do engenheiro recebido em ${fmtData(new Date(L.recebido_em))}.`)].filter(Boolean).join(" ")});
   }
   return S;
 }
