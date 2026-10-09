@@ -272,14 +272,18 @@ ids_obras = ",".join(str(o["id"]) for o in obras)
 p1 = [CAB, "-- PARTE 1/3 · apaga os dados do app e grava os da planilha.",
       "-- Mantém: logins, funções, acesso às obras, foto e configurações das obras que já existem.",
       "-- Obras que não estão na planilha são APAGADAS (com tudo o que é delas).", "begin;",
-      "truncate public.laudos, public.tarefas, public.tarefas_ac, public.unidades, public.areas, public.horarios_excecoes,",
-      "         public.horarios, public.locais, public.clientes restart identity cascade;",
+      # só as tabelas que existem (laudos e exceções só existem depois dos scripts 06 e 07)
+      "do $$ declare lst text; begin",
+      "  select string_agg('public.' || x, ', ') into lst from unnest(array['laudos','tarefas','tarefas_ac','unidades','areas',",
+      "         'horarios_excecoes','horarios','locais','clientes']) x where to_regclass('public.' || x) is not null;",
+      "  execute 'truncate ' || lst || ' restart identity cascade';",
+      "end $$;",
       f"delete from public.obras where id not in ({ids_obras});",
       inserts("obras", ["id", "ordem", "nome", "cidade", "ativa", "config"], obras, fim="\non conflict (id) do nothing"),
       inserts("obra_acessos", ["obra_id", "login"], acessos, fim="\non conflict do nothing") if acessos else "",
       ("insert into public.funcoes_antigas (login, funcoes) values\n" + ",\n".join(f"({q(f['login'])},{arr(f['funcoes'])})" for f in funcoes_antigas)
        + "\non conflict (login) do nothing;") if funcoes_antigas else "",
-      inserts("clientes", ["id", "id_obra", "nome", "email", "telefone", "criado_por"], clientes),
+      inserts("clientes", ["id", "nome", "email", "telefone", "criado_por"], clientes),
       inserts("locais", ["id", "id_obra", "nivel1", "niveis2"], locais),
       inserts("horarios", ["id", "id_obra", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"], horarios),
       inserts("unidades", ["id", "id_obra", "nivel_1", "nivel_2", "unidade", "modulo", "id_cliente", "sub_etapa",
@@ -288,6 +292,11 @@ p1 = [CAB, "-- PARTE 1/3 · apaga os dados do app e grava os da planilha.",
                            "financeiro_status", "financeiro_motivo", "prioridade"], unidades),
       inserts("areas", ["id", "id_obra", "descricao", "sub_etapa", "rep_vistoria_qualidade", "rep_vistoria_arq", "agendamento", "rep_vistoria_sindico"], areas),
       inserts("tarefas_ac", ["id", "id_obra", "id_local", "acao", "etapa_antiga", "etapa_nova", "obs", "repeticao", "coluna", "autor", "data", "agendamento"], tarefas_ac),
+      # obra de cada cliente: só se a coluna já existe (script 07); senão o próprio 07 preenche depois
+      ("do $$ begin\n  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'clientes' and column_name = 'id_obra') then\n"
+       "    execute 'update public.clientes c set id_obra = v.o from (values "
+       + ",".join(f"({c['id']},{c['id_obra']})" for c in clientes if c["id_obra"] is not None)
+       + ") v(id, o) where v.id = c.id';\n  end if;\nend $$;") if any(c["id_obra"] is not None for c in clientes) else "",
       "commit;"]
 arquivos = {"02_dados_1_cadastros.sql": "\n".join(x for x in p1 if x)}
 
@@ -298,8 +307,10 @@ for i, parte in enumerate(partes, 1):
     arquivos[f"02_dados_2_tarefas_{i}.sql"] = "\n".join([CAB, f"-- PARTE 2/3 · tarefas (arquivo {i} de {len(partes)})", "begin;",
                                                          inserts("tarefas", COLS_T, parte) if parte else "", "commit;"])
 
-seqs = "\n".join(f"select setval(pg_get_serial_sequence('public.{t}','id'), greatest((select max(id) from public.{t}), 1));"
-                 for t in ["obras", "clientes", "locais", "horarios", "unidades", "areas", "tarefas", "tarefas_ac", "laudos", "horarios_excecoes"])
+seqs = ("do $$ declare t text; begin\n  foreach t in array array['obras','clientes','locais','horarios','unidades','areas','tarefas','tarefas_ac','laudos','horarios_excecoes'] loop\n"
+        "    if to_regclass('public.' || t) is not null then\n"
+        "      execute format('select setval(pg_get_serial_sequence(%L, ''id''), greatest((select max(id) from public.%I), 1))', 'public.' || t, t);\n"
+        "    end if;\n  end loop;\nend $$;")
 conf = """select 'obras' tabela, count(*) from public.obras union all select 'clientes', count(*) from public.clientes
 union all select 'locais', count(*) from public.locais union all select 'horarios', count(*) from public.horarios
 union all select 'unidades', count(*) from public.unidades union all select 'areas', count(*) from public.areas

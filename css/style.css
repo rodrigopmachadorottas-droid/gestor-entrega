@@ -806,3 +806,70 @@ table.kpi.gerais tfoot td.z{color:var(--fg-3)}
 .imp-tab tr.dup td{color:var(--fg-3)}
 .imp-res{display:flex;gap:10px;flex-wrap:wrap}
 .imp-scroll{max-height:42vh;overflow:auto;border:1px solid var(--border);border-radius:8px}
+
+/* ---------- v2.1.6 ---------- */
+/* botões de ação do popup da unidade (menores, alinhados à esquerda) */
+.acts{gap:8px;padding:8px 10px;justify-content:flex-start;align-content:flex-end}
+.acts .btn{border-radius:6px;padding:3.3px 11.1px;font-size:13.3px;min-height:30.2px}
+.acts .btn svg{width:14px;height:14px}
+/* menu dos 3 pontinhos */
+.dropdown .dd-lbl{font-size:.75rem;font-weight:700;color:var(--fg-3);text-transform:uppercase;letter-spacing:.04em;padding:6px 12px 2px}
+.dropdown .dd-sep{border:0;border-top:1px solid var(--border);margin:6px 0}
+.dropdown button.dd-opt{align-items:center;font-weight:600;gap:8px}
+.dropdown .dd-ck{width:16px;height:16px;display:inline-flex;flex:none}
+.dropdown .dd-ck svg{margin:0;width:16px;height:16px}
+.dropdown button.dd-opt.on{color:var(--primary-d)}
+:root[data-theme="dark"] .dropdown button.dd-opt.on{color:var(--primary-l)}
+.dropdown:has(.dd-opt){min-width:220px}
+/* divisões na tabela de unidades */
+table.grid tbody tr.np td{border-top:2px solid var(--border-2)}
+table.grid tbody tr.nb td{border-top:4px solid var(--fg-2)}
+/* visão hierarquia */
+.screen.hier{display:flex;flex-direction:column;gap:12px}
+.hier-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hleg,.hcnt{display:inline-flex;gap:12px;flex-wrap:wrap;font-size:.85rem;color:var(--fg-2)}
+.hleg span,.hcnt span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.hb-f1{background:var(--neutral)}.hb-f2{background:var(--info)}.hb-f3{background:var(--primary)}.hb-ok{background:var(--ok)}
+.hier-list{display:flex;flex-direction:column;gap:12px}
+.hb{background:var(--surface);border-radius:var(--r);box-shadow:0 1px 3px rgba(0,0,0,.08);overflow:hidden}
+.hb-h,.hp-h{display:grid;grid-template-columns:auto minmax(150px,240px) minmax(80px,1fr) auto;align-items:center;gap:14px;width:100%;border:0;background:none;color:var(--fg);text-align:left;cursor:pointer;font:inherit}
+.hb-h{padding:14px 16px}
+.hb-h .ht b{font-size:1.1rem}
+.hb.open>.hb-h{border-bottom:1px solid var(--border)}
+.hb-h:hover,.hp-h:hover{background:var(--hover)}
+.ht{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hchev{display:inline-flex;transition:transform .15s;transform:rotate(-90deg);color:var(--fg-2)}
+.hchev.on{transform:none}
+.hchev svg{width:18px;height:18px}
+.hbar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--input)}
+.hbar i{display:block;height:100%}
+.hb-body{padding:10px 12px 12px 30px;display:flex;flex-direction:column;gap:8px}
+.hp{border:1px solid var(--border);border-left:3px solid var(--border-2);border-radius:8px;overflow:hidden}
+.hp.open{border-left-color:var(--primary)}
+.hp-h{padding:10px 14px}
+.hp.open>.hp-h{border-bottom:1px solid var(--border);background:var(--surface-2)}
+.hb>.hb-body>.tablewrap,.hp>.tablewrap{width:100%;min-width:0;overflow-x:auto;border-radius:0;max-height:none}
+.screen.hier table.hgrid{--fzx:0px;--fz1:84px}
+.screen.hier table.hgrid th{position:static}
+.screen.hier table.hgrid th.fz{position:sticky;top:0}
+.screen.hier table.hgrid tr:last-child td{border-bottom:0}
+@media (max-width:860px){
+  .hb-h,.hp-h{grid-template-columns:auto 1fr;row-gap:8px}
+  .hb-h .hbar,.hp-h .hbar,.hb-h .hcnt,.hp-h .hcnt{grid-column:2}
+  .hb-body{padding:8px}
+  .screen.hier table.hgrid{--fz1:56px}
+}
+/* locais: botões menores, 6 por linha */
+.loc-units{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.loc-units button{height:46px;font-size:1rem;padding:0 8px;white-space:nowrap;display:flex;align-items:center;justify-content:center}
+.loc-units button.add svg{width:22px;height:22px}
+.loc-units.ac button{white-space:normal;line-height:1.15;text-align:center;height:56px;overflow:hidden}
+@media (max-width:860px){ .loc-units{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px} .loc-units button{height:42px;font-size:.95rem} }
+/* horários: altura automática, botão sempre embaixo; seletor de data laranja */
+.days .day{min-height:0}
+input[type="date"]{accent-color:var(--primary);color-scheme:light}
+:root[data-theme="dark"] input[type="date"]{color-scheme:dark}
+input[type="date"]::-webkit-datetime-edit-day-field:focus,input[type="date"]::-webkit-datetime-edit-month-field:focus,input[type="date"]::-webkit-datetime-edit-year-field:focus{background:var(--primary);color:#fff;border-radius:2px}
+input[type="date"]:focus{outline-color:var(--primary);border-color:var(--primary)}
+.days{flex:0 0 auto;align-items:stretch}

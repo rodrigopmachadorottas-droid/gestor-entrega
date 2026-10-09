@@ -87,6 +87,9 @@ document.addEventListener("click",e=>{
       S.ag=null; toast("Sucesso","Vistoria agendada",`${x.unidade} · ${str}`);
     },
     loteon(){ S.lote={on:true,q:[]}; S.menuAcoes=false; },
+    vistaund(){ S.vistaUnd=el.dataset.v; S.menuAcoes=false; try{ localStorage.setItem("ge-vista-und",S.vistaUnd); }catch(e){} },
+    hiertog(){ const k=el.dataset.k, ab=el.getAttribute("aria-expanded")==="true"; (S.hier||(S.hier={}))[k]=!ab; },
+    hiertodos(){ const v=el.dataset.v==="1"; S.hier={}; unidadesObra().forEach(x=>{ S.hier["b:"+nivel1Nome(x)]=v; S.hier["p:"+nivel1Nome(x)+"|"+x.nivel_2]=v; }); },
     lotecancel(){ S.lote={on:false,q:[]}; },
     lotecell(){ e.stopPropagation(); const col=el.dataset.col, q=S.lote.q, i=q.findIndex(z=>z.id===id&&z.col===col); if(i>=0) q.splice(i,1); else q.push({id,col}); },
     lotesalvar(){ let n=0; S.lote.q.forEach(({id,col})=>{const x=DB.unidades.find(u=>u.id===id); if(x&&blank(x[col])){ executarAcao(x,"liberar",col,{autor:S.user,obs:"Liberação em lote"}); n++; }}); saveDB(); S.lote={on:false,q:[]}; toast("Sucesso",`${n} teste(s) liberado(s)`); },
@@ -107,19 +110,19 @@ document.addEventListener("click",e=>{
       saveDB(); S.loc.modal=null; toast("Sucesso","Área comum salva",nome); },
     acdel(){ const M=S.loc.modal; if(!M.del){ M.del=true; return; } DB.areas=DB.areas.filter(a=>a.id!==M.id); saveDB(); S.loc.modal=null; toast("Sucesso","Área comum excluída"); },
     locedit(){ S.loc.modal={tipo:"local",id}; },
-    locnovo(){ S.loc.modal={tipo:"local",id:null}; },
+    locnovo(){ S.loc.modal={tipo:"local",id:null}; setTimeout(()=>{ const i=document.getElementById("loc-n1"); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length); } },30); },
     undedit(){ S.loc.modal={tipo:"und",id}; },
     undnova(){ S.loc.modal={tipo:"und",id:null,sug:proximaUnidade()}; },
     locfechar(){ S.loc.modal=null; },
     undsalvar(){ const nome=document.getElementById("und-nome").value.trim().toUpperCase(); if(!nome){ toast("Erro","Informe o nome da unidade"); return; }
       const M=S.loc.modal;
       if(M.id){ DB.unidades.find(u=>u.id===M.id).unidade=nome; }
-      else{ if(DB.unidades.some(u=>u.nivel_1===S.loc.localId&&u.unidade===nome)){ toast("Erro","Já existe uma unidade com esse nome neste local"); return; }
+      else{ const casaO=OBRA().config.tipo==="casa"; if(DB.unidades.some(u=>u.nivel_1===S.loc.localId&&(casaO||u.nivel_2===S.loc.n2)&&u.unidade===nome)){ toast("Erro",casaO?"Já existe uma casa com esse nome nesta quadra":"Já existe uma unidade com esse nome neste pavimento"); return; }
         DB.unidades.push(novaUnidade(S.loc.localId,OBRA().config.tipo==="casa"?null:S.loc.n2,nome)); }
       saveDB(); S.loc.modal=null; toast("Sucesso","Unidade salva",nome); },
     unddel(){ const M=S.loc.modal; if(!M.del){ M.del=true; return; } DB.unidades=DB.unidades.filter(u=>u.id!==M.id); saveDB(); S.loc.modal=null; toast("Sucesso","Unidade excluída"); },
     locsalvar(){ const M=S.loc.modal, F=M.f, casa=OBRA().config.tipo==="casa", n1=(F.n1||"").trim();
-      if(!n1){ toast("Erro",casa?"Informe o nome da quadra":"Informe o nome do bloco"); return; }
+      if(!n1||/^(bloco|quadra)$/i.test(n1)){ toast("Erro",casa?"Informe o nome da quadra":"Complete o nome do bloco (ex.: Bloco H)"); return; }
       let l=M.id?localById(M.id):null;
       if(DB.locais.some(x=>x.id_obra===S.obraId&&x!==l&&x.nivel1.toLowerCase()===n1.toLowerCase())){ toast("Erro","Já existe um local com esse nome"); return; }
       let niveis2="";
@@ -130,7 +133,9 @@ document.addEventListener("click",e=>{
       let n=0; planoUnidades(F,l,casa).novas.forEach(x=>{ DB.unidades.push(novaUnidade(l.id,x.pav,x.nome)); n++; });
       saveDB(); S.loc.modal=null; S.loc.localId=l.id; S.loc.n2=casa?0:1; S.locAba="und";
       toast("Sucesso",casa?"Quadra salva":"Bloco salvo",n?`${n1} · ${n} unidade(s) criada(s)`:n1); },
-    locdel(){ const M=S.loc.modal; if(!M.del){ M.del=true; return; } DB.locais=DB.locais.filter(l=>l.id!==M.id); if(S.loc.localId===M.id) S.loc.localId=null; saveDB(); S.loc.modal=null; toast("Sucesso","Local excluído"); },
+    locdel(){ const M=S.loc.modal; if(!M.del){ M.del=true; return; }
+      if(DB.unidades.some(u=>u.nivel_1===M.id&&u.sub_etapa!==1)){ toast("Erro","Há unidades que já saíram da Liberação de Testes"); return; }
+      DB.unidades=DB.unidades.filter(u=>u.nivel_1!==M.id); DB.locais=DB.locais.filter(l=>l.id!==M.id); if(S.loc.localId===M.id) S.loc.localId=null; saveDB(); S.loc.modal=null; toast("Sucesso","Local excluído"); },
     cliaba(){ S.cli.aba=el.dataset.v; S.cli.edit=null; },
     clifiltro(){ S.cli.filtro=el.dataset.v; },
     cliund(){ S.cli.und=id; S.cli.q=""; S.cli.novo=false; },

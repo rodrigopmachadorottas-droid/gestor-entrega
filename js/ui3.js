@@ -1,5 +1,5 @@
 /* ================= CONFIRMAÇÃO DE AÇÃO ================= */
-const ACAO_IC={aprovar:IC.check,aprovarDireto:IC.check,reprovar:IC.x,liberar:IC.arrow,finalizar:IC.arrow,corrigir:IC.arrow,cancelar:IC.undo,agendar:IC.calendar};
+const ACAO_IC={aprovar:IC.check,aprovarDireto:IC.check,liberar:IC.arrow,finalizar:IC.arrow,corrigir:IC.arrow,cancelar:IC.undo,agendar:IC.calendar};
 function tituloAcao(a,s,ctx){
   const t=s.titulo;
   if(a==="liberar") return ctx==="ac"?"Liberar local para vistoria Qualidade":`Liberar ${t}`;

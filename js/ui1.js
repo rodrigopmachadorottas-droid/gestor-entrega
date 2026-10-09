@@ -38,7 +38,7 @@ const IC={
   upload:sv('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.5";
+const VERSAO="v2.1.6";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -173,26 +173,68 @@ function colunasUnidades(){
   if(f.f3){ C.push({h:"Análise Financeira",v:x=>x.sub_etapa>=8?x.financeiro_status||"Pendente":""}); C.push({h:"Entrega Chaves",v:x=>x.sub_etapa===10?"Pendente":x.sub_etapa===11?"Concluído":""}); }
   return C;
 }
+function celulaUnd(x,c){
+  const v=c.v(x)||""; if(c.plain) return `<td class="${c.l?"l":""}">${esc(v)}</td>`;
+  const q=S.lote.on&&c.teste&&S.lote.q.some(z=>z.id===x.id&&z.col===c.col);
+  const clic=S.lote.on&&c.teste&&blank(v)?` data-act="lotecell" data-id="${x.id}" data-col="${c.col}" style="cursor:copy"`:"";
+  return `<td class="c-st ${q?"queued":stClass(v)}"${clic}>${q?"Liberar":esc(v)}</td>`;
+}
+const nomePav=x=>nivel2Nome(x)||"Sem pavimento";
+// visão das unidades: "tabela" (padrão) ou "hier" (bloco > pavimento > unidades)
+function vistaUnd(){ if(!S.vistaUnd){ try{ S.vistaUnd=localStorage.getItem("ge-vista-und")||"tabela"; }catch(e){ S.vistaUnd="tabela"; } } return S.vistaUnd; }
 function telaUnidades(){
   const cfg=OBRA().config, f=S.fil, casa=cfg.tipo==="casa";
   const q=S.busca.trim().toLowerCase();
   const us=ordenarUnidades(unidadesObra().filter(x=>bateBusca(x,q)&&(!f.blocos.length||f.blocos.includes(nivel1Nome(x)))));
-  const C=colunasUnidades(), podeLote=can(ME(),"obra")&&f.f1;
+  const C=colunasUnidades(), podeLote=can(ME(),"obra")&&f.f1, hier=vistaUnd()==="hier";
   const nFil=(f.extras?0:1)+(f.f1?0:1)+(f.f2?0:1)+(f.f3?0:1)+(f.blocos.length?1:0);
   const lote=S.lote.on?`<div class="lotebar"><b>Liberação em lote</b><span class="small">Toque nas células vazias de teste para marcar. ${S.lote.q.length} selecionada(s).</span><span class="spacer"></span>
       <button class="btn ghost sm" data-act="lotecancel">Cancelar</button><button class="btn primary sm" data-act="lotesalvar" ${S.lote.q.length?"":"disabled"}>Liberar ${S.lote.q.length||""}</button></div>`
     :"";
-  const acoes=[podeLote?`<button data-act="loteon">${IC.key}<span><b>Liberar testes em lote</b><small>Marque várias células vazias e libere de uma vez</small></span></button>`:""].filter(Boolean);
-  const menu=acoes.length?`<div class="dd-wrap"><button class="iconbtn" data-act="menuacoes" aria-label="Mais ações" aria-expanded="${!!S.menuAcoes}">${IC.dots}</button>${S.menuAcoes?`<div class="dd-scrim" data-act="menuacoes"></div><div class="dropdown" role="menu">${acoes.join("")}</div>`:""}</div>`:"";
-  const fz=casa?["fz fz1","","fz fz3 fzl"]:["fz fz1","fz fz2","fz fz3 fzl"];
-  const body=us.length?`<div class="tablewrap"><table class="grid ${casa?"casa":""}"><thead><tr><th class="${fz[0]}">${casa?"Quadra":"Bloco"}</th>${casa?"":`<th class="${fz[1]}">Pav</th>`}<th class="${fz[2]}">${casa?"Casa":"Und"}</th>${C.map(c=>`<th>${esc(c.h)}</th>`).join("")}</tr></thead><tbody>
-    ${us.map(x=>`<tr data-act="${S.lote.on?"":"abrirund"}" data-id="${x.id}"><td class="${fz[0]}">${esc(nivel1Nome(x).replace(/^(Bloco|Quadra) /,""))}</td>${casa?"":`<td class="${fz[1]}">${esc(nivel2Nome(x).replace(" Pavimento",""))}</td>`}<td class="${fz[2]}"><b>${esc(x.unidade.replace(/^(AP|CASA) /,""))}</b></td>
-      ${C.map(c=>{const v=c.v(x)||""; if(c.plain) return `<td class="${c.l?"l":""}">${esc(v)}</td>`;
-        const q=S.lote.on&&c.teste&&S.lote.q.some(z=>z.id===x.id&&z.col===c.col);
-        const clic=S.lote.on&&c.teste&&blank(v)?` data-act="lotecell" data-id="${x.id}" data-col="${c.col}" style="cursor:copy"`:"";
-        return `<td class="c-st ${q?"queued":stClass(v)}"${clic}>${q?"Liberar":esc(v)}</td>`;}).join("")}</tr>`).join("")}
-  </tbody></table></div>`:`<div class="panel empty"><b>Nenhuma unidade encontrada</b><span>Mude o filtro ou a busca e tente de novo.</span></div>`;
-  return topbar("Unidades",buscaBox("busca",S.busca,OBRA().config.tipo==="casa"?"Pesquisar casa":"Pesquisar (ex.: 101 ou A101)")+menu+filtroBtn(nFil))+`<main class="screen unid">${lote}${body}</main>`+drawerUnidades();
+  const opt=(v,t)=>`<button data-act="vistaund" data-v="${v}" class="dd-opt ${vistaUnd()===v?"on":""}" role="menuitemradio" aria-checked="${vistaUnd()===v}"><span class="dd-ck">${vistaUnd()===v?IC.check:""}</span>${t}</button>`;
+  const acoes=[`<div class="dd-lbl">Visualização</div>`,opt("tabela","Visão tabela"),opt("hier","Visão hierarquia"),
+    podeLote?`<hr class="dd-sep"><button data-act="loteon" class="dd-opt">Liberar testes em lote</button>`:""].filter(Boolean);
+  const menu=`<div class="dd-wrap"><button class="iconbtn" data-act="menuacoes" aria-label="Mais ações" aria-expanded="${!!S.menuAcoes}">${IC.dots}</button>${S.menuAcoes?`<div class="dd-scrim" data-act="menuacoes"></div><div class="dropdown" role="menu">${acoes.join("")}</div>`:""}</div>`;
+  let body;
+  if(!us.length) body=`<div class="panel empty"><b>Nenhuma unidade encontrada</b><span>Mude o filtro ou a busca e tente de novo.</span></div>`;
+  else if(hier) body=hierUnidades(us,C,casa,!!q);
+  else {
+    const fz=casa?["fz fz1","","fz fz3 fzl"]:["fz fz1","fz fz2","fz fz3 fzl"];
+    // linha mais grossa quando muda o bloco/quadra (nb) ou o pavimento (np)
+    const div=(x,i)=>{ if(!i) return ""; const p=us[i-1]; return nivel1Nome(p)!==nivel1Nome(x)?"nb":(!casa&&p.nivel_2!==x.nivel_2?"np":""); };
+    body=`<div class="tablewrap"><table class="grid ${casa?"casa":""}"><thead><tr><th class="${fz[0]}">${casa?"Quadra":"Bloco"}</th>${casa?"":`<th class="${fz[1]}">Pav</th>`}<th class="${fz[2]}">${casa?"Casa":"Und"}</th>${C.map(c=>`<th>${esc(c.h)}</th>`).join("")}</tr></thead><tbody>
+    ${us.map((x,i)=>`<tr class="${div(x,i)}" data-act="${S.lote.on?"":"abrirund"}" data-id="${x.id}"><td class="${fz[0]}">${esc(nivel1Nome(x).replace(/^(Bloco|Quadra) /,""))}</td>${casa?"":`<td class="${fz[1]}">${esc(nivel2Nome(x).replace(" Pavimento",""))}</td>`}<td class="${fz[2]}"><b>${esc(x.unidade.replace(/^(AP|CASA) /,""))}</b></td>
+      ${C.map(c=>celulaUnd(x,c)).join("")}</tr>`).join("")}
+  </tbody></table></div>`;
+  }
+  return topbar("Unidades",buscaBox("busca",S.busca,OBRA().config.tipo==="casa"?"Pesquisar casa":"Pesquisar (ex.: 101 ou A101)")+menu+filtroBtn(nFil))+`<main class="screen unid${hier?" hier":""}">${lote}${body}</main>`+drawerUnidades();
+}
+/* ----- visão hierarquia: bloco > pavimento > tabela com a unidade e as colunas ----- */
+const HIER_FASES=[["f1","Produção",x=>(ETAPA[x.sub_etapa]||{}).f===1],["f2","Vistorias",x=>(ETAPA[x.sub_etapa]||{}).f===2],["f3","Entrega",x=>(ETAPA[x.sub_etapa]||{}).f===3&&x.sub_etapa!==11],["ok","Concluídas",x=>x.sub_etapa===11]];
+function barraFases(L){
+  const n=L.length||1, segs=HIER_FASES.map(([k,t,fn])=>[k,t,L.filter(fn).length]);
+  return `<span class="hbar" title="${segs.map(([,t,c])=>`${t}: ${c}`).join(" · ")}">${segs.filter(s=>s[2]).map(([k,,c])=>`<i class="hb-${k}" style="width:${c/n*100}%"></i>`).join("")}</span>
+    <span class="hcnt">${segs.filter(s=>s[2]).map(([k,t,c])=>`<span><i class="dot hb-${k}"></i>${c} ${t.toLowerCase()}</span>`).join("")}</span>`;
+}
+function hierAberto(k,busca){ const H=S.hier||(S.hier={}); return k in H?H[k]:(busca||k.startsWith("b:")); }
+function hierUnidades(us,C,casa,busca){
+  const blocos=[...new Set(us.map(nivel1Nome))];
+  const tabela=L=>`<div class="tablewrap"><table class="grid hgrid"><thead><tr><th class="fz fz1 fzl">${casa?"Casa":"Und"}</th>${C.map(c=>`<th>${esc(c.h)}</th>`).join("")}</tr></thead><tbody>
+    ${L.map(x=>`<tr data-act="${S.lote.on?"":"abrirund"}" data-id="${x.id}"><td class="fz fz1 fzl"><b>${esc(x.unidade.replace(/^(AP|CASA) /,""))}</b></td>${C.map(c=>celulaUnd(x,c)).join("")}</tr>`).join("")}</tbody></table></div>`;
+  const cab=(k,cls,titulo,sub,L)=>{ const ab=hierAberto(k,busca);
+    return `<button class="${cls}" data-act="hiertog" data-k="${esc(k)}" aria-expanded="${ab}"><span class="hchev ${ab?"on":""}">${IC.chevD}</span><span class="ht"><b>${esc(titulo)}</b><span class="small muted">${sub}</span></span>${barraFases(L)}</button>`; };
+  const html=blocos.map(b=>{ const Lb=us.filter(x=>nivel1Nome(x)===b), kb="b:"+b, abB=hierAberto(kb,busca);
+    let dentro="";
+    if(abB){
+      if(casa) dentro=tabela(Lb);
+      else { const pavs=[...new Set(Lb.map(x=>x.nivel_2))];
+        dentro=pavs.map(p=>{ const Lp=Lb.filter(x=>x.nivel_2===p), kp="p:"+b+"|"+p, abP=hierAberto(kp,busca);
+          return `<div class="hp ${abP?"open":""}">${cab(kp,"hp-h",nomePav(Lp[0]),`${Lp.length} unidade${Lp.length>1?"s":""}`,Lp)}${abP?tabela(Lp):""}</div>`; }).join(""); }
+    }
+    const nPav=casa?0:new Set(Lb.map(x=>x.nivel_2)).size;
+    return `<section class="hb ${abB?"open":""}">${cab(kb,"hb-h",b,`${casa?"":`${nPav} pavimento${nPav>1?"s":""} · `}${Lb.length} ${casa?"casa":"unidade"}${Lb.length>1?"s":""}`,Lb)}${abB?`<div class="hb-body">${dentro}</div>`:""}</section>`; }).join("");
+  return `<div class="hier-top"><span class="hleg">${HIER_FASES.map(([k,t])=>`<span><i class="dot hb-${k}"></i>${t}</span>`).join("")}</span><span class="spacer"></span>
+    <button class="btn sm ghost" data-act="hiertodos" data-v="1">Abrir tudo</button><button class="btn sm ghost" data-act="hiertodos" data-v="0">Fechar tudo</button></div><div class="hier-list">${html}</div>`;
 }
 function blocosDD(sel,act){
   const casa=OBRA().config.tipo==="casa", L=blocosObra(), txt=sel.length?sel.join(", "):"Selecione";

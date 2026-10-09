@@ -339,7 +339,8 @@ API.removerMinhaFoto = async function(){
   if(MODO_DEMO) salvarLocal();
 };
 API.trocarFotoObra = async function(obra, file){
-  const r = await reduzirImagem(file, 1000, 1000, false);
+  // sem cortar: só reduz para no máximo 1920 px mantendo a proporção (o card ajusta com object-fit)
+  const r = await reduzirImagem(file, 1920, 1920, false);
   obra.foto_url = MODO_DEMO ? r.dataUrl : await enviarFoto(`obras/${obra.id}/${Date.now()}.jpg`, r.blob);
   saveDB();
 };
