@@ -3,7 +3,7 @@
    Cada ação de uma etapa (ex.: "Reprovar · Teste Esgoto") tem uma lista
    de campos. Tipos: observações, lista suspensa, anexo, assinatura,
    pergunta sim/não e checklist. O admin muda em Configurações Admin >
-   Popups de ação; sem configuração vale o padrão (igual ao app antigo).
+   Configurar campos das etapas (Unidades e Áreas comuns); sem configuração vale o padrão (igual ao app antigo).
    Onde cada resposta fica gravada na tarefa:
      obs        → lista "principal" (ex.: motivo da reprova) ou Observações
      anexos     → campo Anexo           checklist → campo Checklist
@@ -15,12 +15,23 @@ const TIPOS_CAMPO = {
   simnao:     { nome:"Pergunta Sim/Não",   desc:"Ex.: o cliente veio com engenheiro?",   max:9 },
   anexo:      { nome:"Anexo",              desc:"Fotos, PDF ou outros arquivos",          max:1 },
   assinatura: { nome:"Assinatura",         desc:"Assinatura do cliente na tela",         max:1 },
-  checklist:  { nome:"Checklist de itens", desc:"Cada item recebe uma das opções",       max:1 }
+  checklist:  { nome:"Checklist de itens", desc:"Cada item recebe uma das opções",       max:1 },
+  data:       { nome:"Data", desc:"", max:1, oculto:true }   // agendar vistoria do síndico (fixo)
 };
 const CK_PADRAO = () => [{ id:"ok", rotulo:"Aprovado", tipo:"ok" }, { id:"construtivo", rotulo:"Construtivo", tipo:"problema" }, { id:"acabamento", rotulo:"Acabamento", tipo:"problema" }];
 const NOME_ACAO = { liberar:"Liberar", cancelar:"Cancelar", aprovar:"Aprovar", reprovar:"Reprovar", corrigir:"Pendências corrigidas", finalizar:"Finalizar unidade", aprovarDireto:"Aprovar direto", agendar:"Agendar vistoria" };
 
 // todas as ações configuráveis, agrupadas pela etapa (na ordem do fluxo)
+// áreas comuns: chave "ac:<etapa>:<ação>"
+function grupoAcoesAC(){
+  const v = [["aprovar","Aprovar"],["reprovar","Reprovar"],["corrigir","Pendências corrigidas"]];
+  return [{ k:"ac:lib", nome:"Liberação Local", acoes:[["liberar","Liberar local"],["cancelar","Cancelar liberação"]] },
+    { k:"ac:rep_vistoria_qualidade", nome:"Vistoria Qualidade", acoes:v },
+    { k:"ac:rep_vistoria_arq", nome:"Vistoria Arquitetura", acoes:v },
+    { k:"ac:agendamento", nome:"Agendamento com Síndico", acoes:[["agendar","Agendar vistoria"],["cancelar","Cancelar agendamento"]] },
+    { k:"ac:rep_vistoria_sindico", nome:"Vistoria do Síndico", acoes:v }];
+}
+const todasAcoesCfg = () => [...grupoAcoes(), ...grupoAcoesAC()];
 function grupoAcoes(){
   const G = TESTES.map(t => ({ k:t.col, nome:t.nome, acoes:[["liberar","Liberar teste"],["cancelar","Cancelar liberação"],["aprovar","Aprovar"],["reprovar","Reprovar"],["corrigir","Pendências corrigidas"]] }));
   G.push({ k:"finalizando", nome:"Finalizando Unidade", acoes:[["finalizar","Finalizar unidade"],["aprovarDireto","Aprovar direto"],["cancelar","Cancelar finalização"]] });
@@ -42,6 +53,7 @@ function campoNovo(tipo){
 }
 // padrão de fábrica de cada ação (o que o app fazia antes da configuração)
 function camposPadrao(key){
+  if(key.startsWith("ac:")) return camposArea(key.split(":")[2]);
   const [sec, a] = key.split(":"), obs = () => ({ id:"obs", tipo:"obs", rotulo:"Observações", obrig:false });
   const teste = TESTES.find(t => t.col === sec);
   if(teste){
@@ -60,7 +72,7 @@ function camposPadrao(key){
 const cfgPopups = () => (DB.config && DB.config.popups) || {};
 const camposDe = key => { const c = cfgPopups()[key]; return c && Array.isArray(c.campos) ? c.campos : camposPadrao(key); };
 // áreas comuns não são configuráveis: agendar pede a data, o resto observação
-function camposArea(a){ return a === "agendar" ? [{ id:"data", tipo:"data", rotulo:"Data da vistoria", obrig:true }] : [{ id:"obs", tipo:"obs", rotulo:"Observações", obrig:false }]; }
+function camposArea(a){ return a === "agendar" ? [{ id:"data", tipo:"data", rotulo:"Data da vistoria", obrig:true, fixo:true }, { id:"obs", tipo:"obs", rotulo:"Observações", obrig:false }] : [{ id:"obs", tipo:"obs", rotulo:"Observações", obrig:false }]; }
 
 /* ---------- estado do formulário (popup de ação ou agenda) ---------- */
 const formVazio = () => ({ v:{}, sn:{}, snt:{}, ck:{}, sig:"", anexos:[] });
@@ -136,7 +148,7 @@ function camposResumo(L){ return L && L.length ? `<div class="obs cf-res">${L.ma
    ===================================================================== */
 function abrirPopupsCfg(){
   const G = grupoAcoes();
-  S.pcfg = { sel:`${G[0].k}:${G[0].acoes[0][0]}`, rasc:JSON.parse(JSON.stringify(cfgPopups())), sujo:false, add:false, abertos:{ [G[0].k]:true } };
+  S.pcfg = { aba:"und", sel:`${G[0].k}:${G[0].acoes[0][0]}`, rasc:JSON.parse(JSON.stringify(cfgPopups())), sujo:false, add:false, abertos:{ [G[0].k]:true } };
   S.adminPanel = false; S.voltarPcfg = S.obraId ? S.screen : "home"; S.screen = "popups"; S.nav = false; S.popup = null;
 }
 const rascCampos = key => { const r = S.pcfg.rasc[key]; return r && Array.isArray(r.campos) ? r.campos : null; };
@@ -145,26 +157,28 @@ function camposEdit(key){ // garante uma cópia editável no rascunho
   return S.pcfg.rasc[key].campos;
 }
 const ehPadrao = key => !rascCampos(key);
-function nomeAcaoCfg(key){ const [sec, a] = key.split(":"), g = grupoAcoes().find(x => x.k === sec), ac = g && g.acoes.find(x => x[0] === a); return { etapa:g ? g.nome : sec, acao:ac ? ac[1] : a }; }
+function nomeAcaoCfg(key){ const i = key.lastIndexOf(":"), sec = key.slice(0, i), a = key.slice(i + 1), g = todasAcoesCfg().find(x => x.k === sec), ac = g && g.acoes.find(x => x[0] === a);
+  return { etapa:g ? g.nome : sec, acao:ac ? ac[1] : a, area:key.startsWith("ac:") }; }
 
 function telaPopups(){
-  const P = S.pcfg, G = grupoAcoes(), key = P.sel, def = rascCampos(key) || camposPadrao(key), nm = nomeAcaoCfg(key);
-  const head = `<header class="topbar"><button class="iconbtn" data-act="pcfgvoltar" aria-label="Voltar">${IC.back}</button><h1>Popups de ação</h1>
+  const P = S.pcfg, G = P.aba === "ac" ? grupoAcoesAC() : grupoAcoes(), key = P.sel, def = rascCampos(key) || camposPadrao(key), nm = nomeAcaoCfg(key);
+  const head = `<header class="topbar"><button class="iconbtn" data-act="pcfgvoltar" aria-label="Voltar">${IC.back}</button><h1>Configurar campos das etapas</h1>
     <button class="tb-btn" data-act="pcfgsalvar" ${P.sujo ? "" : "disabled"} title="Salvar para todas as obras">${IC.check}<span>Salvar alterações</span></button></header><div class="topspace"></div>`;
   const lista = G.map(g => { const ab = P.abertos[g.k] || key.startsWith(g.k + ":");
     return `<div class="pc-grp"><button class="pc-gh" data-act="pcfggrp" data-k="${g.k}" aria-expanded="${ab}"><span class="hchev ${ab ? "on" : ""}">${IC.chevD}</span>${esc(g.nome)}</button>
       ${ab ? g.acoes.map(([a, t]) => { const k = `${g.k}:${a}`; return `<button class="pc-it ${k === key ? "on" : ""}" data-act="pcfgsel" data-k="${k}">${esc(t)}${ehPadrao(k) ? "" : `<i class="pc-mod" title="Personalizado"></i>`}</button>`; }).join("") : ""}</div>`; }).join("");
   const conta = t => def.filter(c => c.tipo === t).length;
-  const addMenu = P.add ? `<div class="dd-scrim" data-act="pcfgadd"></div><div class="dropdown pc-addmenu" role="menu">${Object.entries(TIPOS_CAMPO).map(([t, m]) => `<button data-act="pcfgnovo" data-t="${t}" ${conta(t) >= m.max ? "disabled" : ""}><span><b>${m.nome}</b><small>${conta(t) >= m.max ? "Já tem um nesta ação" : m.desc}</small></span></button>`).join("")}</div>` : "";
+  const addMenu = P.add ? `<div class="dd-scrim" data-act="pcfgadd"></div><div class="dropdown pc-addmenu" role="menu">${Object.entries(TIPOS_CAMPO).filter(([, m]) => !m.oculto).map(([t, m]) => `<button data-act="pcfgnovo" data-t="${t}" ${conta(t) >= m.max ? "disabled" : ""}><span><b>${m.nome}</b><small>${conta(t) >= m.max ? "Já tem um nesta ação" : m.desc}</small></span></button>`).join("")}</div>` : "";
   const cards = def.map((c, i) => campoEditor(c, i, def.length)).join("") || `<div class="empty" style="padding:24px"><b>Sem campos</b><span>O popup só vai pedir a confirmação.</span></div>`;
   if(!P.prev) P.prev = formVazio();
   return head + `<main class="screen pcfg">
-    <aside class="panel pc-side"><p class="small muted" style="margin:0 0 8px">Vale para todas as obras. Escolha a ação para editar os campos do popup.</p>${lista}</aside>
+    <aside class="panel pc-side"><div class="seg loc-abas" role="tablist"><button class="${P.aba !== "ac" ? "on" : ""}" role="tab" aria-selected="${P.aba !== "ac"}" data-act="pcfgaba" data-v="und">Unidades</button><button class="${P.aba === "ac" ? "on" : ""}" role="tab" aria-selected="${P.aba === "ac"}" data-act="pcfgaba" data-v="ac">Áreas comuns</button></div>
+      <p class="small muted" style="margin:8px 0">Vale para todas as obras. Escolha a ação para editar os campos do popup.</p>${lista}</aside>
     <section class="pc-main"><div class="panel pc-ed"><div class="row"><div><div class="small muted">${esc(nm.etapa)}</div><h2 class="h2" style="margin:0">${esc(nm.acao)}</h2></div><span class="spacer"></span>
         ${ehPadrao(key) ? `<span class="pill s-neutral">Padrão</span>` : `<button class="btn sm ghost" data-act="pcfgpadrao">Voltar ao padrão</button>`}</div>
       <div class="pc-cards">${cards}</div>
       <div class="dd-wrap" style="align-self:flex-start"><button class="btn primary sm btn-ic" data-act="pcfgadd">${IC.plus}Adicionar campo</button>${addMenu}</div></div>
-    <div class="panel pc-prev"><b class="small muted">Pré-visualização</b><div class="pc-box"><div class="mhead"><div class="t"><b class="conf-t">${esc(nm.acao)} · ${esc(nm.etapa)}</b><div class="small muted">Bloco A · AP 101</div></div></div>
+    <div class="panel pc-prev"><b class="small muted">Pré-visualização</b><div class="pc-box"><div class="mhead"><div class="t"><b class="conf-t">${esc(nm.acao)} · ${esc(nm.etapa)}</b><div class="small muted">${nm.area ? "Salão de Festas" : "Bloco A · AP 101"}</div></div></div>
       <div class="mbody" id="pc-prev-body">${prevHTML(def)}</div></div></div></section></main>`;
 }
 function campoEditor(c, i, n){
@@ -186,9 +200,9 @@ function campoEditor(c, i, n){
     <label class="chk"><input type="checkbox" ${base} data-cfe="todos" ${c.todos ? "checked" : ""}>Mostrar o botão "Marcar restantes como aprovado"</label>`; }
   return `<div class="pc-card"><div class="pc-ch"><span class="pc-tipo">${esc(m.nome)}</span><span class="spacer"></span>
       <button class="iconbtn" data-act="pcfgmov" ${base} data-d="-1" aria-label="Subir" ${i ? "" : "disabled"}>${IC.chevU}</button><button class="iconbtn" data-act="pcfgmov" ${base} data-d="1" aria-label="Descer" ${i < n - 1 ? "" : "disabled"}>${IC.chevD}</button>
-      <button class="iconbtn" data-act="pcfgdel" ${base} aria-label="Remover campo">${IC.trash || IC.close}</button></div>
+      ${c.fixo ? "" : `<button class="iconbtn" data-act="pcfgdel" ${base} aria-label="Remover campo">${IC.trash || IC.close}</button>`}</div>${c.fixo ? `<span class="small muted">Campo fixo: é a data em que a vistoria fica agendada.</span>` : ""}
     <div class="row2"><div class="field"><label>${c.tipo === "simnao" ? "Pergunta" : "Título do campo"}</label><input class="inp" ${base} data-cfe="rotulo" value="${esc(c.rotulo)}"></div>
-      <label class="chk" style="align-self:end;margin-bottom:9px"><input type="checkbox" ${base} data-cfe="obrig" ${c.obrig ? "checked" : ""}>Obrigatório</label></div>${extra}</div>`;
+      <label class="chk" style="align-self:end;margin-bottom:9px"><input type="checkbox" ${base} data-cfe="obrig" ${c.obrig ? "checked" : ""} ${c.fixo ? "disabled" : ""}>Obrigatório</label></div>${extra}</div>`;
 }
 
 /* ---------- ações (cliques) ---------- */
@@ -196,6 +210,7 @@ Object.assign(ACOES_EXTRA, {
   popupscfg(){ if(!can(userByLogin(REAL_USER), "admin")) return; abrirPopupsCfg(); },
   pcfgvoltar(){ if(S.pcfg && S.pcfg.sujo && !S.pcfg.sair){ S.pcfg.sair = true; toast("Aviso", "Há alterações não salvas", "Toque em voltar de novo para sair sem salvar."); return; } S.pcfg = null; S.screen = S.obraId ? (S.voltarPcfg || "unidades") : "home"; },
   pcfggrp(el){ const k = el.dataset.k; S.pcfg.abertos[k] = el.getAttribute("aria-expanded") !== "true"; },
+  pcfgaba(el){ const P = S.pcfg; if(P.aba === el.dataset.v) return; P.aba = el.dataset.v; const G = P.aba === "ac" ? grupoAcoesAC() : grupoAcoes(); P.sel = `${G[0].k}:${G[0].acoes[0][0]}`; P.abertos[G[0].k] = true; P.add = false; P.prev = formVazio(); },
   pcfgsel(el){ S.pcfg.sel = el.dataset.k; S.pcfg.add = false; S.pcfg.prev = formVazio(); },
   pcfgadd(){ S.pcfg.add = !S.pcfg.add; },
   pcfgnovo(el){ camposEdit(S.pcfg.sel).push(campoNovo(el.dataset.t)); S.pcfg.add = false; S.pcfg.sujo = true; },

@@ -108,7 +108,7 @@ function executarAcaoAC(a,acao,col,o){
   if(old===5){ if(has(a.rep_vistoria_sindico,"Aprovado")) s=7; else if(has(a.rep_vistoria_sindico,"Reprovado")) s=6; }
   a.sub_etapa=s;
   const t={id:nextId("tarefas_ac"),id_obra:a.id_obra,id_local:a.id,acao,etapa_antiga:old,etapa_nova:s,obs:o.obs||"",repeticao:rep,coluna:col,autor:o.autor,data:(o.data||new Date()).toISOString(),agendamento:tAg};
-  if(o.anexos&&o.anexos.length) t.anexos=o.anexos;
+  if(o.anexos&&o.anexos.length) t.anexos=o.anexos; if(o.checklist) t.checklist=o.checklist; if(o.assinatura) t.assinatura=o.assinatura; if(o.campos&&o.campos.length) t.campos=o.campos;
   DB.tarefas_ac.push(t);
   aoAcao({tipo:"area",reg:a,acao,col,antes,depois:{...p,sub_etapa:a.sub_etapa},tarefa:t});
   return t;

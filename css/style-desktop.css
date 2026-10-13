@@ -1055,3 +1055,36 @@ select.inp option:nth-child(even){background:#F4F4F3}
 
 /* ---------- v2.1.12 ---------- */
 .boot-msg{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(324px,90vw)}
+/* hover do bloco (hierarquia): contorno por dentro, para não ser cortado na borda */
+.hb:has(>.hb-h:hover){box-shadow:0 1px 2.7px rgba(0,0,0,.08);outline:1.5px solid var(--primary-l);outline-offset:-1.5px}
+/* configurações admin: botões das funções mais juntos (4.1px no computador) */
+.ap-funcs{display:flex;flex-direction:column;gap:4.6px}
+.ap-funcs .btn{width:100%}
+
+/* ---------- v2.1.13 ---------- */
+/* Visão Ações: linhas sempre da mesma altura; observação longa com "..." e o texto inteiro no tooltip */
+table.list td.obs-c>div{max-width:252px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:help;outline:0}
+.acoes table.list td{white-space:nowrap;vertical-align:middle}
+/* hierarquia: botões Abrir/Fechar tudo com contorno */
+.hier-top .btn.ghost{border:1px solid currentColor}
+@media (max-width:860px){
+  /* indicadores gerais (tela inicial): colunas com respiro, rolagem para o lado e a obra fixa à esquerda */
+  table.kpi.gerais{table-layout:auto;width:max-content;min-width:100%;border-spacing:2.7px}
+  table.kpi.gerais col.c-obra,table.kpi.gerais col.c-tot{width:auto}
+  table.kpi.gerais th,table.kpi.gerais td{padding:7.2px 9px;min-width:68.4px;white-space:nowrap}
+  table.kpi.gerais th.lbl{min-width:106.2px;max-width:126px;position:sticky;left:0;z-index:1}
+  table.kpi.gerais thead th.lbl-h{position:sticky;left:0;z-index:1;background:var(--surface)}
+  .gerais-wrap{padding-bottom:3.6px}
+  /* hierarquia: no celular só os botões */
+  .hier-obra{display:none}
+  /* indicadores: seletor de visão em cima do seletor de etapa */
+  .indhead #ind-visao{order:-1;flex-basis:100%;width:100%}
+  .indhead .spacer{display:none}
+  .bloco{padding:10.8px}
+  table.list td.obs-c>div{max-width:162px}
+}
+/* configurar campos: abas Unidades / Áreas comuns numa linha */
+.screen.pcfg{grid-template-columns:252px minmax(0,1fr)}
+.pc-side .loc-abas{display:flex}
+.pc-side .loc-abas button{flex:1;white-space:nowrap;padding-inline:7.2px}
+@media (max-width:860px){ .screen.pcfg{grid-template-columns:1fr} }

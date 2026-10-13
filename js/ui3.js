@@ -18,7 +18,7 @@ function abrirConf(ctx,a,k){
   const s=secs.find(x=>x.key===k); if(!s) return; const ac=s.acts.find(x=>x.a===a); if(!ac) return;
   if(isU&&a==="agendar"){ if(!item.id_cliente){ toast("Aviso","Essa unidade ainda não possui cliente cadastrado","Vincule o cliente em Clientes."); return; }
     S.ag=novoAg(item); return; }
-  const def=isU?camposDe(`${s.key}:${a}`):camposArea(a);
+  const def=isU?camposDe(`${s.key}:${a}`):camposDe(`ac:${s.key}:${a}`);
   S.conf={ctx,a,col:s.col,k,label:ac.l,kind:ac.k,titulo:tituloAcao(a,s,ctx),
     sub:isU?`${nivel1Nome(item)} · ${item.unidade}`:item.descricao,
     cliente:isU&&item.id_cliente?tituloCase((clienteById(item.id_cliente)||{}).nome||""):"",
