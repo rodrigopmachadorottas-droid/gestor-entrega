@@ -40,7 +40,7 @@ const IC={
   upload:sv('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.17";
+const VERSAO="v2.1.18";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -50,8 +50,8 @@ const S={conf:null,homeInd:null,adminPanel:false,simSel:"",menuAcoes:false,user:
   cli:{aba:"vinc",ubusca:"",filtro:"todas",und:null,q:"",novo:false,nform:{nome:"",telefone:"",email:""},busca:"",edit:null,form:{nome:"",telefone:"",email:""},del:false},hor:null,toasts:[],confirmReset:false,dark:false,locAba:"und"};
 const ME=()=>userByLogin(S.user);
 const OBRA=()=>obraById(S.obraId);
-function filtrosPadrao(u){ return {extras:false,f1:can(u,"admin","obra","instalacoes"),f2:can(u,"admin","obra","qualidade","rc"),f3:can(u,"admin","rc","financeiro"),blocos:[]}; }
-function fasesVisiveis(u){ return {extras:can(u,"admin","lider"),f1:can(u,"admin","obra","instalacoes","qualidade"),f2:can(u,"admin","obra","qualidade","rc"),f3:can(u,"admin","obra","qualidade","rc","financeiro")}; }
+function filtrosPadrao(u){ return {extras:false,f1:can(u,"admin","obra","instalacoes","visualizador"),f2:can(u,"admin","obra","qualidade","rc","visualizador"),f3:can(u,"admin","rc","financeiro","visualizador"),blocos:[]}; }
+function fasesVisiveis(u){ return {extras:can(u,"admin","lider"),f1:can(u,"admin","obra","instalacoes","qualidade","visualizador"),f2:can(u,"admin","obra","qualidade","rc","visualizador"),f3:can(u,"admin","obra","qualidade","rc","financeiro","visualizador")}; }
 function resetFiltros(){ const u=ME(); S.fil=filtrosPadrao(u); S.ind.fil=filtrosPadrao(u); S.ind.fil.blocos=[]; S.ind.ini=""; S.ind.fim=""; }
 
 function toast(tipo,txt,sub){ const id=Math.random(); S.toasts.push({id,tipo,txt,sub}); if(S.toasts.length>4) S.toasts.shift(); renderToasts(); setTimeout(()=>{S.toasts=S.toasts.filter(t=>t.id!==id); renderToasts();},3800); }
@@ -123,7 +123,7 @@ function menuLateral(){
     <div class="sb-head"><button class="logo-btn" data-act="home" aria-label="Voltar para as obras"><img src="${isDark()?LOGOS.branca:LOGOS.preta}" alt="Gestor de Entrega"></button><button data-act="ir" data-to="versoes">${VERSAO}</button></div>
     <nav class="sb-nav">
       <div class="sb-sec">EXECUÇÃO</div>${it("unidades","key","Unidades")}${it("areas","hammer","Áreas Comuns",DB.areas.some(a=>a.id_obra===S.obraId))}
-      <div class="sb-sec">GESTÃO À VISTA</div>${it("indicadores","chart","Indicadores")}${it("agenda","calendar","Agenda",can(u,"admin","obra","qualidade","rc"))}${itemLaudos()}
+      <div class="sb-sec">GESTÃO À VISTA</div>${it("indicadores","chart","Indicadores")}${it("agenda","calendar","Agenda",can(u,"admin","obra","qualidade","rc","visualizador"))}${itemLaudos()}
       ${cfg?`<div class="sb-sec">CONFIGURAÇÕES</div>${cfg}`:""}
     </nav>
     <div class="sb-foot">

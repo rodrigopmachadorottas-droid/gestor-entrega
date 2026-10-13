@@ -1037,3 +1037,8 @@ begin
 
   return jsonb_build_object('linha', v_novo, 'tarefa', v_tar, 'laudo', v_laudo);
 end $$;
+
+-- =====================================================================
+-- 16. v2.1.18: função Visualizador (mesmo conteúdo da 12_atualizacao)
+-- =====================================================================
+insert into public.funcoes values ('visualizador','Visualizador',3) on conflict (codigo) do update set nome = 'Visualizador';

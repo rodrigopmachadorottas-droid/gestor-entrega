@@ -4,7 +4,7 @@ function trocarUsuario(login){ S.user=login; S.confirmReset=false; resetFiltros(
 function aplicarTema(){ document.documentElement.dataset.theme=S.dark?"dark":"light"; const m=document.querySelector('meta[name="theme-color"]'); if(m) m.content=S.dark?"#212329":"#FF9114"; }
 function aplicarPrefs(p){ p=p||{}; if(p.tema){ S.dark=p.tema==="dark"; aplicarTema(); try{localStorage.setItem("ge-tema",p.tema);}catch(_){} } }
 const TELAS_INICIAIS=[["indicadores","Indicadores"],["unidades","Unidades"],["areas","Áreas Comuns"],["agenda","Agenda"]];
-function telaInicialObra(){ const t=((S.perfil||{}).prefs||{}).tela; if(t==="areas"&&S.obraId&&!DB.areas.some(a=>a.id_obra===S.obraId)) return "indicadores"; if(t==="agenda"&&!can(ME(),"admin","obra","qualidade","rc")) return "indicadores"; return TELAS_INICIAIS.some(x=>x[0]===t)?t:"indicadores"; }
+function telaInicialObra(){ const t=((S.perfil||{}).prefs||{}).tela; if(t==="areas"&&S.obraId&&!DB.areas.some(a=>a.id_obra===S.obraId)) return "indicadores"; if(t==="agenda"&&!can(ME(),"admin","obra","qualidade","rc","visualizador")) return "indicadores"; return TELAS_INICIAIS.some(x=>x[0]===t)?t:"indicadores"; }
 function bloqueadoPorLote(){ if(S.lote.q.length){ toast("Aviso","Você tem liberações não salvas","Toque em Liberar ou Cancelar antes de sair."); return true; } return false; }
 function entrarObra(id){ S.obraId=id; S.screen=telaInicialObra(); S.nav=false; S.navObras=false; S.popup=null; S.busca=""; S.lote={on:false,q:[]}; S.loc={localId:null,n2:null,modal:null,cfgAberta:false}; S.hor=null; S.agd={mes:new Date(new Date().getFullYear(),new Date().getMonth(),1),dia:startOfDay(new Date()),busca:""}; resetFiltros(); }
 

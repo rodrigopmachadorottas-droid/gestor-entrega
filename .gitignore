@@ -1,0 +1,5 @@
+# dados exportados do SharePoint e SQL gerados (têm dados pessoais de clientes)
+*.csv
+02_dados_*.sql
+dados/
+.DS_Store

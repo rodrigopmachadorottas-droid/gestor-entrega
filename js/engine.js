@@ -118,7 +118,7 @@ const CHECKLIST_QUALIDADE=["Pintura (paredes e teto)","Revestimentos e rejuntes"
 const CK_OPCOES=[["ok","Aprovado"],["construtivo","Construtivo"],["acabamento","Acabamento"]];
 /* ================= SEÇÕES DO POPUP (visibilidade + botões por permissão) ================= */
 const can = (user,...ps)=>ps.some(p=>user.perms.includes(p));
-function secaoVisivel(user,...ps){ return can(user,"admin",...ps); }
+function secaoVisivel(user,...ps){ return can(user,"admin","visualizador",...ps); }   // visualizador vê tudo, sem ações
 
 function secoesUnidade(u,user,fases){
   const cfg=obraById(u.id_obra).config, T=DB.tarefas.filter(t=>t.id_unidade===u.id).sort((a,b)=>a.data.localeCompare(b.data));

@@ -25,8 +25,8 @@ const TESTES = [
   {k:"gas",col:"rep_teste_gas",nome:"Teste Gás"},
   {k:"eletrico",col:"rep_teste_eletrico",nome:"Teste Elétrico"}
 ];
-const PERMS = ["admin","lider","obra","instalacoes","qualidade","rc","financeiro","arquitetura"];
-const PERM_NOME = {admin:"Admin",obra:"Obra",instalacoes:"Instalações",qualidade:"Qualidade",rc:"Relacionamento (RC)",financeiro:"Financeiro",arquitetura:"Arquitetura",lider:"Líder de área"};
+const PERMS = ["admin","lider","visualizador","obra","instalacoes","qualidade","rc","financeiro","arquitetura"];
+const PERM_NOME = {admin:"Admin",obra:"Obra",instalacoes:"Instalações",qualidade:"Qualidade",rc:"Relacionamento (RC)",financeiro:"Financeiro",arquitetura:"Arquitetura",lider:"Líder de área",visualizador:"Visualizador"};
 const HORAS = []; for(let h=7;h<=19;h++){HORAS.push(String(h).padStart(2,"0")+":00"); if(h<19) HORAS.push(String(h).padStart(2,"0")+":30");}
 const DIAS = [["segunda","Segunda-Feira"],["terca","Terça-Feira"],["quarta","Quarta-Feira"],["quinta","Quinta-Feira"],["sexta","Sexta-Feira"],["sabado","Sábado"]];
 const DIA_KEY = {1:"segunda",2:"terca",3:"quarta",4:"quinta",5:"sexta",6:"sabado"}; // getDay()
