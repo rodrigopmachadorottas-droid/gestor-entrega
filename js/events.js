@@ -21,15 +21,15 @@ document.addEventListener("click",e=>{
     simvoltar(){ trocarUsuario(REAL_USER); S.adminPanel=false; },
     menuacoes(){ S.menuAcoes=!S.menuAcoes; },
     trocaobra(){ if(bloqueadoPorLote()) return; entrarObra(id); toast("Sucesso","Obra alterada",OBRA().nome); },
-    ir(){ if(bloqueadoPorLote()) return; if(el.dataset.to==="clientes"&&!podeCadastrarClientes(ME())) return; S.screen=el.dataset.to; S.nav=false; S.popup=null; S.drawer=false; if(S.screen==="horarios") S.hor=null; },
+    ir(){ if(bloqueadoPorLote()) return; if(el.dataset.to==="clientes"&&!podeCadastrarClientes(ME())) return; if(el.dataset.to==="financeiro"&&!podeFinanceiro(ME())) return; S.screen=el.dataset.to; S.nav=false; S.popup=null; S.drawer=false; if(S.screen==="horarios") S.hor=null; },
     tema(){ const v=el.dataset.v; S.dark = v? v==="dark" : !isDark(); aplicarTema(); try{localStorage.setItem("ge-tema",S.dark?"dark":"light");}catch(_){} API.salvarPrefs({tema:S.dark?"dark":"light"}); },
     telaini(){ API.salvarPrefs({tela:el.dataset.v}); toast("Sucesso","Tela inicial salva",TELAS_INICIAIS.find(x=>x[0]===el.dataset.v)[1]); },
     locaba(){ S.locAba=el.dataset.v; if(S.locAba==="ac") S.loc.localId="ac"; else if(S.loc.localId==="ac") S.loc.localId=null; },
     fotodel(){ API.removerMinhaFoto().then(()=>{ toast("Sucesso","Foto removida"); render(); }).catch(err=>toast("Erro","Não foi possível remover a foto",msgErro(err))); },
 
     agdinfo(){ S.agdInfo=!S.agdInfo; },
+    laudoinfo(){ S.laudoInfo=!S.laudoInfo; },
     agdabrir(){ S.popup={tipo:el.dataset.ac?"ac":"und",id}; S.agdInfo=false; },
-    engsim(){ S.conf.eng=el.dataset.v==="1"; },
     laudoaba(){ S.laudoAba=el.dataset.v; },
     laudoabrir(){ S.laudoRec={id,obs:"",arq:null}; },
     laudofechar(){ S.laudoRec=null; },
@@ -45,21 +45,17 @@ document.addEventListener("click",e=>{
     indbloco(){ const b=el.dataset.b, L=S.ind.fil.blocos; S.ind.fil.blocos=L.includes(b)?L.filter(x=>x!==b):[...L,b]; },
     indlimpar(){ S.ind.fil=filtrosPadrao(ME()); S.ind.ini=""; S.ind.fim=""; },
     indgrp(){ const f=el.dataset.f; S.ind.fechado[f]=!S.ind.fechado[f]; },
-    abrirund(){ S.popup={tipo:"und",id}; },
+    abrirund(){ const x=DB.unidades.find(u=>u.id===id); if(ehHall(x)){ toast("Aviso","O HALL não tem fluxo de etapas"); return; } S.popup={tipo:"und",id}; },
     abrirac(){ S.popup={tipo:"ac",id}; },
     fecharpop(){ S.popup=null; S.ag=null; S.conf=null; },
     abrirconf(){ abrirConf(el.dataset.ctx,el.dataset.a,el.dataset.k); },
     conffechar(){ S.conf=null; },
     confok(){ confirmarAcao(); },
-    ckset(){ S.conf.ck[+el.dataset.i]=el.dataset.v; },
-    ckall(){ CHECKLIST_QUALIDADE.forEach((_,i)=>{ if(!S.conf.ck[i]) S.conf.ck[i]="ok"; }); },
-    siglimpar(){ S.conf.sig=""; },
-    anxdel(){ S.conf.anexos.splice(+el.dataset.i,1); },
     homeind(){ S.homeInd=S.homeInd?null:{etapa:"rep_teste_esgoto"}; },
     acaound(){
       const x=DB.unidades.find(u=>u.id===S.popup.id), a=el.dataset.a, col=el.dataset.col, k=el.dataset.k;
       if(a==="agendar"){ if(!x.id_cliente){ toast("Aviso","Essa unidade ainda não possui cliente cadastrado","Vincule o cliente em Clientes."); return; }
-        const n=new Date(); S.ag={id:x.id,mes:new Date(n.getFullYear(),n.getMonth(),1),dia:null,hora:null}; return; }
+        S.ag=novoAg(x); return; }
       const f=document.getElementById(`obs-und-${k}`), isSel=f&&f.tagName==="SELECT";
       let obs=f?f.value.trim():"";
       if(isSel&&a==="reprovar"&&!obs){ toast("Erro","Selecione o motivo da reprova"); return; }
@@ -83,13 +79,14 @@ document.addEventListener("click",e=>{
       const x=DB.unidades.find(u=>u.id===A.id), str=fmtData(A.dia)+" "+A.hora, h=horariosDia(S.obraId,DIA_KEY[A.dia.getDay()]).find(z=>z.Horas===A.hora);
       if(h&&ocupacao(S.obraId,str,x.id)>=h.Pessoas){ toast("Erro","Esse horário já está lotado","Escolha outro horário."); return; }
       if(!can(ME(),"admin")&&!antecedenciaOk(str)){ toast("Erro","Precisa de 24 horas de antecedência","Escolha um horário a partir de amanhã neste mesmo horário."); return; }
-      executarAcao(x,"agendar","agendamento",{autor:S.user,obs:(document.getElementById("ag-obs")||{}).value||"",agendamento:str}); saveDB();
+      const erro=validarCampos(A.def,A.f,"agendar"); if(erro){ toast("Erro",erro); return; }
+      executarAcao(x,"agendar","agendamento",{autor:S.user,...coletarCampos(A.def,A.f),agendamento:str}); saveDB();
       S.ag=null; toast("Sucesso","Vistoria agendada",`${x.unidade} · ${str}`);
     },
     loteon(){ S.lote={on:true,q:[]}; S.menuAcoes=false; },
     vistaund(){ S.vistaUnd=el.dataset.v; S.menuAcoes=false; try{ localStorage.setItem("ge-vista-und",S.vistaUnd); }catch(e){} },
     hiertog(){ const k=el.dataset.k, ab=el.getAttribute("aria-expanded")==="true"; (S.hier||(S.hier={}))[k]=!ab; },
-    hiertodos(){ const v=el.dataset.v==="1"; S.hier={}; unidadesObra().forEach(x=>{ S.hier["b:"+nivel1Nome(x)]=v; S.hier["p:"+nivel1Nome(x)+"|"+x.nivel_2]=v; }); },
+    hiertodos(){ const v=el.dataset.v==="1"; S.hier={}; unidadesObra(true).forEach(x=>{ S.hier["b:"+nivel1Nome(x)]=v; S.hier["p:"+nivel1Nome(x)+"|"+x.nivel_2]=v; }); },
     lotecancel(){ S.lote={on:false,q:[]}; },
     lotecell(){ e.stopPropagation(); const col=el.dataset.col, q=S.lote.q, i=q.findIndex(z=>z.id===id&&z.col===col); if(i>=0) q.splice(i,1); else q.push({id,col}); },
     lotesalvar(){ let n=0; S.lote.q.forEach(({id,col})=>{const x=DB.unidades.find(u=>u.id===id); if(x&&blank(x[col])){ executarAcao(x,"liberar",col,{autor:S.user,obs:"Liberação em lote"}); n++; }}); saveDB(); S.lote={on:false,q:[]}; toast("Sucesso",`${n} teste(s) liberado(s)`); },
@@ -134,7 +131,7 @@ document.addEventListener("click",e=>{
       saveDB(); S.loc.modal=null; S.loc.localId=l.id; S.loc.n2=casa?0:1; S.locAba="und";
       toast("Sucesso",casa?"Quadra salva":"Bloco salvo",n?`${n1} · ${n} unidade(s) criada(s)`:n1); },
     locdel(){ const M=S.loc.modal; if(!M.del){ M.del=true; return; }
-      if(DB.unidades.some(u=>u.nivel_1===M.id&&u.sub_etapa!==1)){ toast("Erro","Há unidades que já saíram da Liberação de Testes"); return; }
+      if(!can(ME(),"admin")&&DB.unidades.some(u=>u.nivel_1===M.id&&u.sub_etapa!==1&&!ehHall(u))){ toast("Erro","Há unidades que já saíram da Liberação de Testes"); return; }
       DB.unidades=DB.unidades.filter(u=>u.nivel_1!==M.id); DB.locais=DB.locais.filter(l=>l.id!==M.id); if(S.loc.localId===M.id) S.loc.localId=null; saveDB(); S.loc.modal=null; toast("Sucesso","Local excluído"); },
     cliaba(){ S.cli.aba=el.dataset.v; S.cli.edit=null; },
     clifiltro(){ S.cli.filtro=el.dataset.v; },
@@ -183,12 +180,13 @@ document.addEventListener("click",e=>{
       if(dup){ toast("Erro","Existem horários duplicados, corrija"); return; }
       const rec=DB.horarios.find(h=>h.id===S.hor.cfgId)||(DB.horarios.push({id:nextId("horarios"),id_obra:S.obraId,valido_desde:null}),DB.horarios[DB.horarios.length-1]);
       DIAS.forEach(([k])=>{ rec[k]=JSON.stringify([...D[k]].sort((a,b)=>a.Horas.localeCompare(b.Horas))); }); saveDB(); const cid=rec.id; carregarHor(cid); toast("Sucesso","Horários salvos"); }
-  }[act];
+  }[act] || (ACOES_EXTRA[act] && (()=>{ const r=ACOES_EXTRA[act](el,id,e); if(r&&r.then) r.then(()=>render()); }));
   if(run){ e.preventDefault(); run(); render(); }
 });
 
 document.addEventListener("input",e=>{
   const t=e.target, b=t.dataset.bind;
+  for(const f of INPUT_EXTRA){ const r=f(t,"input"); if(r){ if(r==="render") render(); return; } }
   if(b==="busca"){ S.busca=t.value; render(); }
   else if(b==="acBusca"){ S.acBusca=t.value; render(); }
   else if(b==="agdBusca"){ S.agd.busca=t.value; render(); }
@@ -206,13 +204,14 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("change",e=>{
   const t=e.target;
+  for(const f of INPUT_EXTRA){ const r=f(t,"change"); if(r){ if(r==="render") render(); return; } }
   if(t.dataset.actChange==="simsel"){ S.simSel=t.value; return; }
   if(t.id==="foto-eu"&&t.files[0]){ const f=t.files[0]; t.value=""; S.carregando="Enviando a foto..."; render();
     API.trocarMinhaFoto(f).then(()=>toast("Sucesso","Foto atualizada")).catch(err=>toast("Erro","Não foi possível trocar a foto",msgErro(err))).finally(()=>{ S.carregando=""; render(); }); return; }
   if(t.id==="foto-obra"&&t.files[0]){ const f=t.files[0]; t.value=""; S.carregando="Enviando a foto da obra..."; render();
     API.trocarFotoObra(OBRA(),f).then(()=>toast("Sucesso","Foto da obra atualizada")).catch(err=>toast("Erro","Não foi possível trocar a foto",msgErro(err))).finally(()=>{ S.carregando=""; render(); }); return; }
   if(t.id==="laudo-file"&&S.laudoRec){ S.laudoRec.arq=t.files[0]||null; render(); return; }
-  if(t.id==="conf-file"&&S.conf){ [...t.files].forEach(f=>{ if(f.size>20*1024*1024){ toast("Erro","Arquivo muito grande",f.name+" passa de 20 MB"); return; } S.conf.anexos.push({nome:f.name,tam:f.size,file:f}); }); render(); return; }
+  if(t.id==="conf-file"&&formAtual()){ const F=formAtual(); [...t.files].forEach(f=>{ if(f.size>20*1024*1024){ toast("Erro","Arquivo muito grande",f.name+" passa de 20 MB"); return; } F.anexos.push({nome:f.name,tam:f.size,file:f}); }); t.value=""; render(); return; }
   if(t.dataset.conf&&S.conf){ S.conf[t.dataset.conf]=t.value; return; }
   if(t.dataset.hi){ S.homeInd.etapa=t.value; render(); return; }
   if(t.dataset.fil){ S.fil[t.dataset.fil]=t.checked; render(); return; }
@@ -222,6 +221,7 @@ document.addEventListener("change",e=>{
   if(t.dataset.cfgnum){ OBRA().config[t.dataset.cfgnum]=Math.max(1,Math.min(40,parseInt(t.value)||8)); saveDB(); render(); return; }
   if((t.dataset.locf==="gerar"||t.dataset.locf==="hall")&&S.loc.modal&&S.loc.modal.f){ S.loc.modal.f[t.dataset.locf]=t.checked; render(); return; }
   if(t.dataset.pdfv&&S.pdfCfg){ S.pdfCfg.visoes[t.dataset.pdfv]=t.checked; render(); return; }
+  if(t.dataset.pdfrep&&S.pdfCfg){ S.pdfCfg.rep=t.checked; return; }
   if(t.dataset.pdfe&&S.pdfCfg){ const L=S.pdfCfg.etapas, k=t.dataset.pdfe; S.pdfCfg.etapas=t.checked?[...L,k]:L.filter(x=>x!==k); render(); return; }
   if(t.id==="imp-arq"&&S.imp&&t.files[0]){ lerPlanilha(t.files[0]); t.value=""; return; }
   if(t.id==="imp-obra"&&S.imp){ S.imp.origem=+t.value||null; S.imp.sel=[]; render(); return; }

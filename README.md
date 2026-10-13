@@ -18,6 +18,10 @@ O passo a passo completo para colocar no ar está no documento
 | `js/auth.js` | login, pedido de acesso e tela Usuários |
 | `js/engine.js` | regras do fluxo (etapas, testes, vistorias) |
 | `js/ui*.js`, `js/events.js` | telas e cliques |
+| `js/campos.js` | campos dos popups de ação e a tela de configuração (admin) |
+| `js/financeiro.js` | tela Análise Financeira e importação da planilha |
+| `js/apelidos.js` | apelidos e frase da tela inicial |
+| `js/indleg.js` | legendas, cores e explicações da Visão Unidades |
 | `js/demo.js` | gerador de dados fictícios do modo demonstração |
 | `js/vendor/` | bibliotecas: supabase-js 2.117.2, jsPDF 2.5.2 e html2canvas 1.4.1 (PDF), SheetJS 0.18.5 (planilhas) — licenças ao lado |
 | `img/` | logos e fotos das obras |
@@ -28,6 +32,8 @@ O passo a passo completo para colocar no ar está no documento
 | `supabase/05_atualizacao_2.1.3.sql` | funções novas (Qualidade no lugar de Excelência, sem Gerente, Admin exclusivo) e casas sem pavimento — rodar 1x depois da 04 |
 | `supabase/06_atualizacao_2.1.4.sql` | laudos de engenheiro e regra das 24 h de antecedência no agendamento — rodar 1x depois da 05 |
 | `supabase/07_atualizacao_2.1.5.sql` | função Líder de área, clientes por obra e exceções de horário — rodar 1x depois da 06 |
+| `supabase/09_atualizacao_2.1.8.sql` | apelidos por pessoa e motivo Inadimplente — rodar 1x depois da 08 |
+| `supabase/08_atualizacao_2.1.7.sql` | popups de ação configuráveis (config_global), campos extras nas tarefas e análise financeira — rodar 1x depois da 07 |
 | `supabase/99_zerar_tudo.sql` | apaga tudo para recomeçar (cuidado) |
 
 ## Rodar no computador
@@ -57,4 +63,4 @@ Os arquivos `02_dados_*.sql` e os CSV têm dados pessoais de clientes: **não su
 
 ## Publicar uma nova versão
 
-Altere os arquivos, troque `?v=2.1.6` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
+Altere os arquivos, troque `?v=2.1.9` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.

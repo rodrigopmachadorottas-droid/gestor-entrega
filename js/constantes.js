@@ -31,6 +31,10 @@ const HORAS = []; for(let h=7;h<=19;h++){HORAS.push(String(h).padStart(2,"0")+":
 const DIAS = [["segunda","Segunda-Feira"],["terca","Terça-Feira"],["quarta","Quarta-Feira"],["quinta","Quinta-Feira"],["sexta","Sexta-Feira"],["sabado","Sábado"]];
 const DIA_KEY = {1:"segunda",2:"terca",3:"quarta",4:"quinta",5:"sexta",6:"sabado"}; // getDay()
 
+/* ganchos para telas em arquivos separados: cliques (data-act) e digitação/troca de campos */
+const ACOES_EXTRA = {};   // nome da ação → função(el, id, evento)
+const INPUT_EXTRA = [];   // função(alvo, "input"|"change") → true (tratado) ou "render"
+
 /* ================= UTILITÁRIOS ================= */
 const pad = n=>String(n).padStart(2,"0");
 const esc = s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));

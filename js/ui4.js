@@ -60,6 +60,7 @@ const PERM_DESC={lider:"Liderança da área: vê Informações Extras e Dados po
 function prefsPerfil(u){
   const P=(S.perfil||{}).prefs||{}, tela=telaInicialObra(), ops=TELAS_INICIAIS.filter(([k])=>k!=="agenda"||can(u,"admin","obra","qualidade","rc"));
   return `<section class="panel prefs"><h2 class="h3">Preferências</h2>
+    <div class="pref-row"><div><b>Como você quer ser chamado</b><span class="small muted">Aparece na frase da tela inicial, escolhida ao acaso entre os seus apelidos. Clique num apelido para editar.</span></div>${apelidosEditor(meusApelidos(),"eu")}</div>
     <div class="pref-row"><div><b>Foto</b><span class="small muted">Aparece no menu e no histórico das unidades.</span></div><div class="row" style="gap:7.2px"><label class="btn sm ghost">${IC.camera}${u.foto?"Trocar foto":"Colocar foto"}<input type="file" id="foto-eu" accept="image/*" hidden></label>${u.foto?`<button class="btn sm ghost" data-act="fotodel">Remover</button>`:""}</div></div>
     <div class="pref-row"><div><b>Tela ao entrar na obra</b><span class="small muted">Qual tela abre primeiro quando você escolhe uma obra.</span></div><div class="seg">${ops.map(([k,l])=>`<button class="${tela===k?"on":""}" data-act="telaini" data-v="${k}">${l}</button>`).join("")}</div></div>
     <div class="pref-row"><div><b>Tema</b><span class="small muted">Fica salvo para as próximas vezes.</span></div><div class="seg"><button class="${isDark()?"":"on"}" data-act="tema" data-v="light">Claro</button><button class="${isDark()?"on":""}" data-act="tema" data-v="dark">Escuro</button></div></div>

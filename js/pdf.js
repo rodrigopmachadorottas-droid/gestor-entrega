@@ -5,8 +5,6 @@
    se os blocos não couberem legíveis numa só. As páginas são montadas em
    HTML, fotografadas (html2canvas) e juntadas num PDF (jsPDF).
    ===================================================================== */
-const PDF_COR = { ok:"rgba(76,175,80,.42)", bad:"rgba(244,67,54,.40)", info:"rgba(46,126,223,.38)", warn:"rgba(255,152,0,.42)" };
-const corPdf = s => PDF_COR[stClass(s)] || "#D1D0D0";
 const PDF_W = 1062, PDF_H = 733, PDF_GAP = 14;      // A4 deitado menos 8 mm de margem, em px (96 dpi)
 const PDF_VISOES = [["unid","Visão Unidades"],["geral","Visão Geral"],["aprov","Visão Aprovações"],["usuarios","Dados por usuário"]];
 
@@ -15,7 +13,7 @@ function carregarScript(src){ return new Promise((ok, falha) => { if(document.qu
 async function libsPdf(){ await carregarScript("js/vendor/html2canvas.min.js"); await carregarScript("js/vendor/jspdf.umd.min.js"); }
 
 /* ---------- popup de configuração ---------- */
-function abrirPdfCfg(){ S.pdfCfg = { visoes:{ unid:true, geral:false, aprov:false, usuarios:false }, etapas:[S.ind.etapa] }; }
+function abrirPdfCfg(){ S.pdfCfg = { visoes:{ unid:true, geral:false, aprov:false, usuarios:false }, etapas:[S.ind.etapa], rep:!!S.ind.rep }; }
 function popupPdfCfg(){
   const C = S.pdfCfg, ops = indEtapas(), lider = can(ME(), "admin", "lider");
   const vis = PDF_VISOES.filter(([k]) => k !== "usuarios" || lider);
@@ -24,7 +22,8 @@ function popupPdfCfg(){
     <div class="mhead"><div class="t"><b class="conf-t">Gerar PDF</b><div class="small muted">${esc(OBRA().nome)} · A4 deitado · cada visão (ou etapa) em uma página</div></div><button class="iconbtn" data-act="pdfcfgfechar" aria-label="Fechar">${IC.close}</button></div>
     <div class="mbody"><div class="field"><label>Visões</label>${vis.map(([k, l]) => `<label class="chk"><input type="checkbox" data-pdfv="${k}" ${C.visoes[k] ? "checked" : ""}>${l}</label>`).join("")}</div>
       ${C.visoes.unid ? `<div class="field"><div class="row"><label style="margin:0">Etapas da Visão Unidades</label><span class="spacer"></span><button class="linkbtn" data-act="pdfetapas">${C.etapas.length === ops.length ? "Desmarcar todas" : "Marcar todas"}</button></div>
-        <div class="pdf-etapas">${ops.map(o => `<label class="chk"><input type="checkbox" data-pdfe="${o.id}" ${C.etapas.includes(o.id) ? "checked" : ""}>${esc(o.nome)}</label>`).join("")}</div></div>` : ""}
+        <div class="pdf-etapas">${ops.map(o => `<label class="chk"><input type="checkbox" data-pdfe="${o.id}" ${C.etapas.includes(o.id) ? "checked" : ""}>${esc(o.nome)}</label>`).join("")}</div>
+        <label class="chk"><input type="checkbox" data-pdfrep="1" ${C.rep ? "checked" : ""}>Considerar repetição (Aprovado 1°, Aprovado 2°...) nas etapas que têm</label></div>` : ""}
       <span class="small muted">Os filtros de blocos e de período que estão ligados nos Indicadores valem também para o PDF.</span></div>
     <div class="mfoot"><span class="small muted">${nPag ? `${nPag} página(s) ou mais` : "Escolha pelo menos uma visão"}</span><span class="spacer"></span><button class="btn primary btn-ic" data-act="pdfgerar" ${nPag ? "" : "disabled"}>${IC.pdf}Baixar PDF</button></div></div></div>`;
 }
@@ -38,21 +37,22 @@ function caixaMedida(){
   const box = document.createElement("div"); box.id = "print"; box.className = "medindo"; document.body.appendChild(box); return box;
 }
 // Visão Unidades de uma etapa: devolve 1 ou mais páginas (HTML)
-function paginasUnidades(op){
-  const obra = OBRA(), corr = corrigidosSet(), blocos = blocosInd(), us = unidadesInd().filter(x => blocos.includes(nivel1Nome(x))), leg = LEGENDAS[op.tipo];
+function paginasUnidades(op, rep){
+  const obra = OBRA(), corr = corrigidosSet(), blocos = blocosInd(), us = unidadesInd().filter(x => blocos.includes(nivel1Nome(x)));
   if(!blocos.length) return [];
-  const stAll = us.map(x => statusInd(x, op, corr)), pct = (n, t) => t ? ` (${Math.round(n / t * 100)}%)` : "";
+  const stAll = us.map(x => statusUnd(x, op, corr, rep)), pct = (n, t) => t ? ` (${Math.round(n / t * 100)}%)` : "";
+  const itens = itensLegenda(op, stAll, rep), corPdf = s => (itens.find(i => i.l === s) || { cor:corItem(op, s) }).cor;
   const blocoHTML = b => {
     const ub = us.filter(x => nivel1Nome(x) === b), linhas = linhasBloco(ub, obra.config), cols = Math.max(1, ...linhas.map(r => r.length));
-    const st = ub.map(x => statusInd(x, op, corr));
-    const tiles = linhas.map(r => r.map(x => `<div style="background:${corPdf(statusInd(x, op, corr))}">${esc(x.unidade.replace(/^(AP|CASA) /, ""))}</div>`).join("")
+    const st = ub.map(x => statusUnd(x, op, corr, rep));
+    const tiles = linhas.map(r => r.map(x => `<div style="background:${corPdf(statusUnd(x, op, corr, rep))}">${esc(x.unidade.replace(/^(AP|CASA) /, ""))}</div>`).join("")
       + (r.length < cols ? "<span></span>".repeat(cols - r.length) : "")).join("");
     return `<div class="pdf-b"><div class="pdf-tiles" style="grid-template-columns:repeat(${cols},40px)">${tiles}</div>
       <h4>${esc(b)} <span>(${ub.length})</span></h4>
-      <div class="lg">${leg.map(l => { const n = st.filter(s => s === l).length; return n ? `<span><i style="background:${corPdf(l)}"></i>${esc(l)} ${n}</span>` : ""; }).join("")}</div></div>`;
+      <div class="lg">${itens.map(i => { const n = st.filter(s => s === i.l).length; return n ? `<span><i style="background:${i.cor}"></i>${esc(i.l)} ${n}</span>` : ""; }).join("")}</div></div>`;
   };
-  const sub = `Etapa: <b>${esc(op.nome)}</b> · ${blocos.length} ${obra.config.tipo === "casa" ? "quadras" : "blocos"} · ${us.length} unidades`;
-  const leg2 = `<div class="pdf-leg">${leg.map(l => { const n = stAll.filter(s => s === l).length; return `<span><i style="background:${corPdf(l)}"></i>${esc(l)}: <b>${n}</b>${pct(n, stAll.length)}</span>`; }).join("")}</div>`;
+  const sub = `Etapa: <b>${esc(op.nome)}</b>${rep ? " (considerando repetição)" : ""} · ${blocos.length} ${obra.config.tipo === "casa" ? "quadras" : "blocos"} · ${us.length} unidades`;
+  const leg2 = `<div class="pdf-leg">${itens.map(i => `<span><i style="background:${i.cor}"></i>${esc(i.l)}: <b>${i.n}</b>${pct(i.n, stAll.length)}</span>`).join("")}</div>`;
   const box = caixaMedida();
   box.innerHTML = `<div class="pdf-page" style="height:auto">${cabecalhoPdf("Visão Unidades", sub)}${leg2}</div><div class="pdf-grid medir">${blocos.map(blocoHTML).join("")}</div>`;
   const els = [...box.querySelectorAll(".pdf-grid.medir .pdf-b")];
@@ -97,7 +97,7 @@ function periodoTxt(){ const I = S.ind; return I.ini || I.fim ? `Período: ${I.i
 async function gerarPdf(){
   const C = S.pdfCfg, ops = indEtapas(), obra = OBRA();
   const paginas = [];
-  if(C.visoes.unid) ops.filter(o => C.etapas.includes(o.id)).forEach(op => paginas.push(...paginasUnidades(op)));
+  if(C.visoes.unid) ops.filter(o => C.etapas.includes(o.id)).forEach(op => paginas.push(...paginasUnidades(op, !!C.rep && repSuporta(op))));
   if(C.visoes.geral) paginas.push(paginaConteudo("Visão Geral", "Número de unidades por fase e etapa", indGeral()));
   if(C.visoes.aprov) paginas.push(paginaConteudo("Visão Aprovações", "Unidades aprovadas por etapa e tentativa", indAprovacoes()));
   if(C.visoes.usuarios && can(ME(), "admin", "lider")) paginas.push(paginaConteudo("Dados por usuário", periodoTxt(), dadosPorUsuarioHTML()));

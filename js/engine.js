@@ -69,7 +69,7 @@ function executarAcao(u,acao,col,o){
   u.sub_etapa=recalcEtapa(old,u,cfg,sub);
   const t={id:nextId("tarefas"),id_obra:u.id_obra,id_unidade:u.id,acao:acao==="aprovarDireto"?"finalizar":acao,
     etapa_antiga:old,etapa_nova:u.sub_etapa,obs:o.obs||"",repeticao:rep,coluna:col,autor:o.autor,data:(o.data||new Date()).toISOString(),agendamento:tAg};
-  if(o.anexos&&o.anexos.length) t.anexos=o.anexos; if(o.checklist) t.checklist=o.checklist; if(o.assinatura) t.assinatura=o.assinatura;
+  if(o.anexos&&o.anexos.length) t.anexos=o.anexos; if(o.checklist) t.checklist=o.checklist; if(o.assinatura) t.assinatura=o.assinatura; if(o.campos&&o.campos.length) t.campos=o.campos;
   DB.tarefas.push(t);
   let laudo=null;
   if(o.laudo&&col==="rep_vistoria_cliente"){ DB.laudos=DB.laudos||[]; laudo={id:nextId("laudos"),id_obra:u.id_obra,id_unidade:u.id,id_tarefa:t.id,engenheiro:o.laudo.engenheiro||"",status:"pendente",criado_em:t.data,criado_por:o.autor,recebido_em:null,recebido_por:null,obs:""}; DB.laudos.push(laudo); }
@@ -179,13 +179,14 @@ function secoesUnidade(u,user,fases){
   }
   return S;
 }
-function mov(t,tipo,txt){ return {data:new Date(t.data),autor:t.autor,tipo,txt,obs:t.obs,anexos:t.anexos,checklist:t.checklist,assinatura:t.assinatura,temAss:t.tem_assinatura,tid:t.id}; }
+function mov(t,tipo,txt){ return {data:new Date(t.data),autor:t.autor,tipo,txt,obs:t.obs,anexos:t.anexos,checklist:t.checklist,campos:t.campos,assinatura:t.assinatura,temAss:t.tem_assinatura,tid:t.id}; }
 function movTeste(t){
-  const m={liberar:["info","liberou a unidade para teste."],aprovar:["ok",`aprovou a unidade no ${t.repeticao}° teste.`],reprovar:["bad",`reprovou a unidade no ${t.repeticao}° teste.`],cancelar:["neutral","cancelou a liberação."],corrigir:["primary",`corrigiu as pendências e liberou a unidade para fazer o ${t.repeticao}° teste.`]}[t.acao]||["neutral",t.acao];
+  const m={liberar:["info","liberou a unidade para teste."],aprovar:["ok",`aprovou a unidade no ${t.repeticao?t.repeticao+"° ":""}teste.`],reprovar:["bad",`reprovou a unidade no ${t.repeticao?t.repeticao+"° ":""}teste.`],cancelar:["neutral","cancelou a liberação."],corrigir:["primary",`corrigiu as pendências e liberou a unidade para fazer o ${t.repeticao?t.repeticao+"° ":"próximo "}teste.`]}[t.acao]||["neutral",t.acao];
   return mov(t,m[0],m[1]);
 }
 function movVist(t){
-  const m={aprovar:["ok",`aprovou a unidade na ${t.repeticao}ª vistoria.`],reprovar:["bad",`reprovou a unidade na ${t.repeticao}ª vistoria.`],corrigir:["primary",`corrigiu as pendências e liberou a unidade para fazer a ${t.repeticao}ª vistoria.`]}[t.acao]||["neutral",t.acao];
+  const n=t.repeticao?`${t.repeticao}ª `:"";
+  const m={aprovar:["ok",`aprovou a unidade na ${n}vistoria.`],reprovar:["bad",`reprovou a unidade na ${n}vistoria.`],corrigir:["primary",`corrigiu as pendências e liberou a unidade para fazer a ${n}vistoria.`]}[t.acao]||["neutral",t.acao];
   return mov(t,m[0],m[1]);
 }
 

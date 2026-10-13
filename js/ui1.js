@@ -28,6 +28,7 @@ const IC={
   plus:sv('<path d="M12 5v14M5 12h14"/>'),
   trash:sv('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
   edit:sv('<path d="M4 20h4L19 9l-4-4L4 16z"/>'),
+  settings:sv('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
   chevL:sv('<path d="M15 18l-6-6 6-6"/>'), chevR:sv('<path d="M9 18l6-6-6-6"/>'), chevD:sv('<path d="M6 9l6 6 6-6"/>'), chevU:sv('<path d="M6 15l6-6 6 6"/>'),
   dots:sv('<circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>',1),
   clip:sv('<path d="M20 11.5l-8.2 8.2a5 5 0 01-7-7L13 4.4a3.3 3.3 0 014.7 4.7l-8.2 8.2a1.7 1.7 0 01-2.4-2.4l7.5-7.5"/>'),
@@ -38,7 +39,7 @@ const IC={
   upload:sv('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.6";
+const VERSAO="v2.1.9";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -77,7 +78,7 @@ function telaHome(){
   const u=ME();
   const obras=[...DB.obras].filter(o=>o.ativa!==false||can(u,"admin")).sort((a,b)=>a.ordem-b.ordem);
   const acesso=o=>can(u,"admin")||(", "+o.usuarios+", ").includes(", "+u.login+", ");
-  return `<div class="home-z"><div class="home-top"><div class="wrap"><b>Controle das Unidades | Excelência Operacional</b><span class="home-ola"><b>${saudacao()}, ${esc(u.nome.split(" ")[0])}!</b>${topoAcoes()}</span></div></div>
+  return `<div class="home-z"><div class="home-top"><div class="wrap"><b>Controle das Unidades | Excelência Operacional</b><span class="home-ola"><b>${esc(saudacaoHome())}</b>${topoAcoes()}</span></div></div>
   <section class="home-hero">
     <button class="logo-btn" data-act="adminpanel" aria-label="Gestor de Entrega"><img class="logo" src="${isDark()?LOGOS.branca:LOGOS.preta}" alt="Gestor de Entrega"></button>
     ${podeIndGerais(u)?`<button class="iconbtn home-dash ${S.homeInd?"on":""}" data-act="homeind" aria-label="Indicadores gerais das obras" title="Indicadores gerais">${io("indicadores")}</button>`:""}
@@ -114,8 +115,8 @@ function podeIndGerais(u){ return obrasDoUsuario(u).length>1&&opcoesGerais(u).le
 /* ================= MENU LATERAL ================= */
 function menuLateral(){
   if(!S.nav) return "";
-  const u=ME(), it=(id,ic,txt,ok=true)=>ok?`<button class="sb-item ${S.screen===id?"on":""}" data-act="ir" data-to="${id}">${io(id)}${txt}</button>`:"";
-  const cfg=[it("locais","building","Locais",can(u,"admin")),it("clientes","users","Clientes",podeCadastrarClientes(u)),it("horarios","clock","Horários",can(u,"admin","obra","qualidade"))].join("");
+  const u=ME(), it=(id,ic,txt,ok=true)=>ok?`<button class="sb-item ${S.screen===id?"on":""}" data-act="ir" data-to="${id}">${IO[id]?io(id):(IC[ic]||"")}${txt}</button>`:"";
+  const cfg=[it("locais","building","Obra",can(u,"admin")),it("clientes","users","Clientes",podeCadastrarClientes(u)),it("horarios","clock","Horários",can(u,"admin","obra","qualidade")),it("financeiro","money","Análise Financeira",podeFinanceiro(u))].join("");
   const obrasAcesso=DB.obras.filter(o=>can(u,"admin")||(", "+o.usuarios+", ").includes(", "+u.login+", "));
   return `<div class="scrim" data-act="navclose"></div><aside class="sidebar" aria-label="Menu">
     <div class="sb-head"><button class="logo-btn" data-act="home" aria-label="Voltar para as obras"><img src="${isDark()?LOGOS.branca:LOGOS.preta}" alt="Gestor de Entrega"></button><button data-act="ir" data-to="versoes">${VERSAO}</button></div>
@@ -144,6 +145,7 @@ function painelAdmin(){
     <button class="btn primary" data-act="simular">Simular Acesso</button>
     ${S.user!==REAL_USER?`<p class="small muted" style="margin:0">Simulando: <b>${esc(ME().nome)}</b></p><button class="btn ghost sm" data-act="simvoltar">Voltar para o meu acesso</button>`:""}
     ${MODO_DEMO?"":`<h3 class="ap-sub">Usuários</h3><button class="btn dark ap-usr" data-act="usuarios">${IC.users}Gerenciar usuários${nU?`<span class="sb-badge">${nU}</span>`:""}</button>`}
+    <h3 class="ap-sub">Popups de ação</h3><button class="btn dark ap-usr" data-act="popupscfg">${IC.edit}Configurar campos dos popups</button>
     <button class="iconbtn temabtn" data-act="tema" aria-label="${isDark()?"Usar tema claro":"Usar tema escuro"}">${isDark()?io("moon"):io("sun")}</button>
     <span class="spacer"></span>
     ${MODO_DEMO?`<div class="proto"><span class="eyebrow">Modo demonstração</span><span class="small muted">Dados fictícios. As alterações ficam só neste navegador.</span>
@@ -159,8 +161,10 @@ function bateBusca(x,q){
   const m=/^([a-z])\s*-?\s*(\d+)$/i.exec(q); if(!m) return false;
   const bloco=nivel1Nome(x).toLowerCase(); return (bloco.endsWith(" "+m[1].toLowerCase())||bloco===m[1].toLowerCase())&&x.unidade.toLowerCase().includes(m[2]);
 }
-function unidadesObra(){ return DB.unidades.filter(u=>u.id_obra===S.obraId); }
-function ordenarUnidades(arr){ return arr.sort((a,b)=>nivel1Nome(a).localeCompare(nivel1Nome(b))||((a.nivel_2||0)-(b.nivel_2||0))||(numUnd(a.unidade)-numUnd(b.unidade))); }
+// HALL: aparece junto com as unidades (tabela/hierarquia e Obra), mas não tem fluxo, cliente nem indicador
+const ehHall=u=>/^HALL\b/i.test((u&&u.unidade)||"");
+function unidadesObra(comHall){ return DB.unidades.filter(u=>u.id_obra===S.obraId&&(comHall||!ehHall(u))); }
+function ordenarUnidades(arr){ return arr.sort((a,b)=>nivel1Nome(a).localeCompare(nivel1Nome(b))||((a.nivel_2||0)-(b.nivel_2||0))||((ehHall(a)?1e9:numUnd(a.unidade))-(ehHall(b)?1e9:numUnd(b.unidade)))); }
 function blocosObra(){ return DB.locais.filter(l=>l.id_obra===S.obraId).map(l=>l.nivel1).sort(); }
 function colunasUnidades(){
   const u=ME(), cfg=OBRA().config, f=S.fil, C=[];
@@ -180,12 +184,14 @@ function celulaUnd(x,c){
   return `<td class="c-st ${q?"queued":stClass(v)}"${clic}>${q?"Liberar":esc(v)}</td>`;
 }
 const nomePav=x=>nivel2Nome(x)||"Sem pavimento";
+// HALL não tem fluxo: uma célula só, cinza, no lugar das etapas
+const celulasOuHall=(x,C)=>ehHall(x)?(C.length?`<td class="hall-cel" colspan="${C.length}">Hall do pavimento · sem fluxo de etapas</td>`:""):C.map(c=>celulaUnd(x,c)).join("");
 // visão das unidades: "tabela" (padrão) ou "hier" (bloco > pavimento > unidades)
 function vistaUnd(){ if(!S.vistaUnd){ try{ S.vistaUnd=localStorage.getItem("ge-vista-und")||"tabela"; }catch(e){ S.vistaUnd="tabela"; } } return S.vistaUnd; }
 function telaUnidades(){
   const cfg=OBRA().config, f=S.fil, casa=cfg.tipo==="casa";
   const q=S.busca.trim().toLowerCase();
-  const us=ordenarUnidades(unidadesObra().filter(x=>bateBusca(x,q)&&(!f.blocos.length||f.blocos.includes(nivel1Nome(x)))));
+  const us=ordenarUnidades(unidadesObra(true).filter(x=>bateBusca(x,q)&&(!f.blocos.length||f.blocos.includes(nivel1Nome(x)))));
   const C=colunasUnidades(), podeLote=can(ME(),"obra")&&f.f1, hier=vistaUnd()==="hier";
   const nFil=(f.extras?0:1)+(f.f1?0:1)+(f.f2?0:1)+(f.f3?0:1)+(f.blocos.length?1:0);
   const lote=S.lote.on?`<div class="lotebar"><b>Liberação em lote</b><span class="small">Toque nas células vazias de teste para marcar. ${S.lote.q.length} selecionada(s).</span><span class="spacer"></span>
@@ -203,8 +209,8 @@ function telaUnidades(){
     // linha mais grossa quando muda o bloco/quadra (nb) ou o pavimento (np)
     const div=(x,i)=>{ if(!i) return ""; const p=us[i-1]; return nivel1Nome(p)!==nivel1Nome(x)?"nb":(!casa&&p.nivel_2!==x.nivel_2?"np":""); };
     body=`<div class="tablewrap"><table class="grid ${casa?"casa":""}"><thead><tr><th class="${fz[0]}">${casa?"Quadra":"Bloco"}</th>${casa?"":`<th class="${fz[1]}">Pav</th>`}<th class="${fz[2]}">${casa?"Casa":"Und"}</th>${C.map(c=>`<th>${esc(c.h)}</th>`).join("")}</tr></thead><tbody>
-    ${us.map((x,i)=>`<tr class="${div(x,i)}" data-act="${S.lote.on?"":"abrirund"}" data-id="${x.id}"><td class="${fz[0]}">${esc(nivel1Nome(x).replace(/^(Bloco|Quadra) /,""))}</td>${casa?"":`<td class="${fz[1]}">${esc(nivel2Nome(x).replace(" Pavimento",""))}</td>`}<td class="${fz[2]}"><b>${esc(x.unidade.replace(/^(AP|CASA) /,""))}</b></td>
-      ${C.map(c=>celulaUnd(x,c)).join("")}</tr>`).join("")}
+    ${us.map((x,i)=>`<tr class="${div(x,i)}${ehHall(x)?" hall":""}" ${ehHall(x)?"":`data-act="${S.lote.on?"":"abrirund"}" data-id="${x.id}"`}><td class="${fz[0]}">${esc(nivel1Nome(x).replace(/^(Bloco|Quadra) /,""))}</td>${casa?"":`<td class="${fz[1]}">${esc(nivel2Nome(x).replace(" Pavimento",""))}</td>`}<td class="${fz[2]}"><b>${esc(x.unidade.replace(/^(AP|CASA) /,""))}</b></td>
+      ${celulasOuHall(x,C)}</tr>`).join("")}
   </tbody></table></div>`;
   }
   return topbar("Unidades",buscaBox("busca",S.busca,OBRA().config.tipo==="casa"?"Pesquisar casa":"Pesquisar (ex.: 101 ou A101)")+menu+filtroBtn(nFil))+`<main class="screen unid${hier?" hier":""}">${lote}${body}</main>`+drawerUnidades();
@@ -220,20 +226,21 @@ function hierAberto(k,busca){ const H=S.hier||(S.hier={}); return k in H?H[k]:(b
 function hierUnidades(us,C,casa,busca){
   const blocos=[...new Set(us.map(nivel1Nome))];
   const tabela=L=>`<div class="tablewrap"><table class="grid hgrid"><thead><tr><th class="fz fz1 fzl">${casa?"Casa":"Und"}</th>${C.map(c=>`<th>${esc(c.h)}</th>`).join("")}</tr></thead><tbody>
-    ${L.map(x=>`<tr data-act="${S.lote.on?"":"abrirund"}" data-id="${x.id}"><td class="fz fz1 fzl"><b>${esc(x.unidade.replace(/^(AP|CASA) /,""))}</b></td>${C.map(c=>celulaUnd(x,c)).join("")}</tr>`).join("")}</tbody></table></div>`;
+    ${L.map(x=>`<tr class="${ehHall(x)?"hall":""}" ${ehHall(x)?"":`data-act="${S.lote.on?"":"abrirund"}" data-id="${x.id}"`}><td class="fz fz1 fzl"><b>${esc(x.unidade.replace(/^(AP|CASA) /,""))}</b></td>${celulasOuHall(x,C)}</tr>`).join("")}</tbody></table></div>`;
   const cab=(k,cls,titulo,sub,L)=>{ const ab=hierAberto(k,busca);
-    return `<button class="${cls}" data-act="hiertog" data-k="${esc(k)}" aria-expanded="${ab}"><span class="hchev ${ab?"on":""}">${IC.chevD}</span><span class="ht"><b>${esc(titulo)}</b><span class="small muted">${sub}</span></span>${barraFases(L)}</button>`; };
+    return `<button class="${cls}" data-act="hiertog" data-k="${esc(k)}" aria-expanded="${ab}"><span class="hchev ${ab?"on":""}">${IC.chevD}</span><span class="ht"><b>${esc(titulo)}</b><span class="small muted">${sub}</span></span></button>`; };
   const html=blocos.map(b=>{ const Lb=us.filter(x=>nivel1Nome(x)===b), kb="b:"+b, abB=hierAberto(kb,busca);
     let dentro="";
     if(abB){
       if(casa) dentro=tabela(Lb);
       else { const pavs=[...new Set(Lb.map(x=>x.nivel_2))];
         dentro=pavs.map(p=>{ const Lp=Lb.filter(x=>x.nivel_2===p), kp="p:"+b+"|"+p, abP=hierAberto(kp,busca);
-          return `<div class="hp ${abP?"open":""}">${cab(kp,"hp-h",nomePav(Lp[0]),`${Lp.length} unidade${Lp.length>1?"s":""}`,Lp)}${abP?tabela(Lp):""}</div>`; }).join(""); }
+          const nU=Lp.filter(x=>!ehHall(x)).length, nH=Lp.length-nU;
+          return `<div class="hp ${abP?"open":""}">${cab(kp,"hp-h",nomePav(Lp[0]),`${nU} unidade${nU!==1?"s":""}${nH?` + hall`:""}`,Lp)}${abP?tabela(Lp):""}</div>`; }).join(""); }
     }
-    const nPav=casa?0:new Set(Lb.map(x=>x.nivel_2)).size;
-    return `<section class="hb ${abB?"open":""}">${cab(kb,"hb-h",b,`${casa?"":`${nPav} pavimento${nPav>1?"s":""} · `}${Lb.length} ${casa?"casa":"unidade"}${Lb.length>1?"s":""}`,Lb)}${abB?`<div class="hb-body">${dentro}</div>`:""}</section>`; }).join("");
-  return `<div class="hier-top"><span class="hleg">${HIER_FASES.map(([k,t])=>`<span><i class="dot hb-${k}"></i>${t}</span>`).join("")}</span><span class="spacer"></span>
+    const nPav=casa?0:new Set(Lb.map(x=>x.nivel_2)).size, nU=Lb.filter(x=>!ehHall(x)).length;
+    return `<section class="hb ${abB?"open":""}">${cab(kb,"hb-h",b,`${casa?"":`${nPav} pavimento${nPav>1?"s":""} · `}${nU} ${casa?"casa":"unidade"}${nU!==1?"s":""}`,Lb)}${abB?`<div class="hb-body">${dentro}</div>`:""}</section>`; }).join("");
+  return `<div class="hier-top"><span class="spacer"></span>
     <button class="btn sm ghost" data-act="hiertodos" data-v="1">Abrir tudo</button><button class="btn sm ghost" data-act="hiertodos" data-v="0">Fechar tudo</button></div><div class="hier-list">${html}</div>`;
 }
 function blocosDD(sel,act){
@@ -257,16 +264,17 @@ function drawerUnidades(){
 function popupUnidade(){
   const x=DB.unidades.find(u=>u.id===S.popup.id), u=ME();
   const secs=secoesUnidade(x,u,S.fil);
-  const fin=x.financeiro_status?`<div class="row" style="margin-top:7.2px">${pill("Financeiro "+x.financeiro_status).replace("s-neutral","s-"+(x.financeiro_status==="Liberado"?"ok":x.financeiro_status==="Bloqueado"?"bad":"warn"))}<span class="muted">${esc(x.financeiro_motivo)}</span></div>`:"";
+  const fst=finStatus(x), fin=fst?`<div class="row" style="margin-top:7.2px">${pill("Financeiro "+fst).replace("s-neutral","s-"+(fst==="Liberado"?"ok":fst==="Bloqueado"?"bad":"warn"))}<span class="muted">${esc(x.financeiro_motivo)}</span></div>`:"";
   if(S.ag&&S.ag.id===x.id) return `<div class="modal" role="dialog" aria-modal="true" aria-label="Agendar vistoria"><div class="scrim" data-act="fecharpop"></div><div class="box tall">${agendaTab()}</div></div>`;
   return `<div class="modal" role="dialog" aria-modal="true" aria-label="Unidade ${esc(x.unidade)}"><div class="scrim" data-act="fecharpop"></div><div class="box tall">
-    <div class="mhead"><div class="t"><div class="crumb">${esc(nivel1Nome(x))}${nivel2Nome(x)?" / "+esc(nivel2Nome(x)):""} / <b>${esc(x.unidade)}</b></div>${fin}</div>
-      <span class="pill s-neutral">${esc(ETAPA[x.sub_etapa].n)}</span><button class="iconbtn" data-act="fecharpop" aria-label="Fechar">${IC.close}</button></div>
+    <div class="mh-etapa">${esc(ETAPA[x.sub_etapa].n)}</div>
+    <div class="mhead und-head"><div class="t"><div class="crumb">${esc(nivel1Nome(x))}${nivel2Nome(x)?" / "+esc(nivel2Nome(x)):""} / <b>${esc(x.unidade)}</b></div>${fin}</div>
+      <span class="pill s-neutral etp">${esc(ETAPA[x.sub_etapa].n)}</span><button class="iconbtn" data-act="fecharpop" aria-label="Fechar">${IC.close}</button></div>
     <div class="mbody" id="mb-und" data-keep-scroll>${secs.length?secs.map(s=>secaoHTML(s,"und")).join(""):`<div class="empty"><b>Nada para mostrar nesta unidade</b><span>As fases liberadas no filtro não têm etapas iniciadas aqui.</span></div>`}</div></div></div>`;
 }
 function secaoHTML(s,ctx){
   const k=s.key, temRep=s.acts.some(a=>a.a==="reprovar");
-  const moves=s.moves.length?`<ul class="moves">${s.moves.map(m=>{const [c,i]=MOV_IC[m.tipo]||MOV_IC.neutral; return `<li><span class="ic" style="background:${c}">${i}</span><div><b class="tnum">${fmtDT(m.data)}</b> - ${esc(nomeUsuario(m.autor))} ${esc(m.txt)}</div>${m.obs?`<div class="obs">${esc(m.obs)}</div>`:""}${m.checklist?ckResumo(m.checklist):""}${m.anexos&&m.anexos.length?`<div class="obs anx">${IC.clip}${m.anexos.map(a=>a.path?`<button class="linkbtn" data-act="anexo" data-path="${esc(a.path)}">${esc(a.nome)}</button>`:esc(a.nome)).join(", ")}</div>`:""}${m.assinatura?`<div class="obs"><img class="sigimg" src="${m.assinatura}" alt="Assinatura do cliente"></div>`:m.temAss?`<div class="obs"><button class="linkbtn" data-act="verass" data-id="${m.tid}">Ver assinatura do cliente</button></div>`:""}</li>`;}).join("")}</ul>`:"";
+  const moves=s.moves.length?`<ul class="moves">${s.moves.map(m=>{const [c,i]=MOV_IC[m.tipo]||MOV_IC.neutral; return `<li><span class="ic" style="background:${c}">${i}</span><div><b class="tnum">${fmtDT(m.data)}</b> - ${esc(nomeUsuario(m.autor))} ${esc(m.txt)}</div>${m.obs?`<div class="obs">${esc(m.obs)}</div>`:""}${camposResumo(m.campos)}${m.checklist?ckResumo(m.checklist):""}${m.anexos&&m.anexos.length?`<div class="obs anx">${IC.clip}${m.anexos.map(a=>a.path?`<button class="linkbtn" data-act="anexo" data-path="${esc(a.path)}">${esc(a.nome)}</button>`:esc(a.nome)).join(", ")}</div>`:""}${m.assinatura?`<div class="obs"><img class="sigimg" src="${m.assinatura}" alt="Assinatura do cliente"></div>`:m.temAss?`<div class="obs"><button class="linkbtn" data-act="verass" data-id="${m.tid}">Ver assinatura do cliente</button></div>`:""}</li>`;}).join("")}</ul>`:"";
   let acts="";
   if(s.acts.length) acts=`<div class="acts">${s.acts.map(a=>`<button class="btn ${a.k} btn-ic" data-act="abrirconf" data-ctx="${ctx}" data-a="${a.a}" data-k="${k}">${ACAO_IC[a.a]||""}${esc(a.l)}</button>`).join("")}</div>`;
   return `<section class="stagebox"><div class="sh"><b>${esc(s.titulo)}</b>${pill(s.status)}</div>${moves}${s.aviso?`<div class="small muted" style="padding:0 12.6px 9px">${esc(s.aviso)}</div>`:""}${acts}</section>`;
@@ -285,13 +293,13 @@ function agendaTab(){
       return `<button class="${A.hora===h.Horas?"sel":""}" data-act="aghora" data-h="${h.Horas}" ${cheio||cedo?"disabled":""} title="${cedo?"Precisa de 24 horas de antecedência":""}" aria-label="${h.Horas}, ${oc} de ${h.Pessoas} vagas ocupadas">${h.Horas} - ${oc}/${h.Pessoas}</button>`;}).join("")
       :`<span class="small muted">${ex&&ex.fechado?`Sem vistorias neste dia${ex.motivo?` (${esc(ex.motivo)})`:""}.`:"A obra não tem horários neste dia. Configure em Horários."}</span>`; }
   else slots=`<span class="small muted">Escolha um dia no calendário.</span>`;
-  const finCls=x.financeiro_status==="Liberado"?"ok":x.financeiro_status==="Bloqueado"?"bad":"warn";
+  const fst=finStatus(x), finCls=fst==="Liberado"?"ok":fst==="Bloqueado"?"bad":"warn";
   return `<div class="ag">
     <div class="ag-l"><button class="iconbtn" data-act="agfechar" aria-label="Voltar para as tarefas da unidade" style="margin-left:-7.2px">${IC.back}</button>
       <div class="muted" style="font-weight:700">${esc(nivel1Nome(x))}${nivel2Nome(x)?" / "+esc(nivel2Nome(x)):""}</div><div class="und">${esc(x.unidade)}</div>
       ${c?`<div class="line">${IC.user}${esc(tituloCase(c.nome))}</div><div class="line">${IC.phone}<span class="tnum">${esc(fmtTel(c.telefone))}</span></div><div class="line">${IC.at}${esc(c.email)}</div>`:""}
       ${x.prioridade?`<div class="line" style="color:var(--primary)">${IC.bookmark}<b>Prioridade: ${esc(x.prioridade)}</b></div>`:""}
-      ${x.financeiro_status?`<div><span class="pill s-${finCls}">Financeiro ${esc(x.financeiro_status)}</span><div class="small muted" style="margin-top:5.4px">${esc(x.financeiro_motivo)}</div></div>`:""}
+      ${fst?`<div><span class="pill s-${finCls}">Financeiro ${esc(fst)}</span><div class="small muted" style="margin-top:5.4px">${esc(x.financeiro_motivo)}</div></div>`:""}
       <span class="spacer"></span><span class="pill s-neutral" style="align-self:flex-start;background:var(--surface)">${nv}ª Vistoria</span></div>
     <div class="ag-r"><div class="cal"><b style="font-size:1.1rem">Escolha uma data:</b>
         <div class="cal-head"><button class="iconbtn" data-act="agmes" data-d="-1" aria-label="Mês anterior">${IC.chevL}</button><b>${esc(mesNome(m))}</b><button class="iconbtn" data-act="agmes" data-d="1" aria-label="Próximo mês">${IC.chevR}</button></div>
@@ -299,7 +307,7 @@ function agendaTab(){
         ${dias.map(d=>{const fora=d.getMonth()!==m.getMonth(), passado=d<hoje&&!admin, sel=A.dia&&sameDay(d,A.dia);
           return fora?"<span></span>":`<button class="${sel?"sel":""} ${sameDay(d,hoje)?"today":""}" data-act="agdia" data-t="${d.getTime()}" ${passado||d.getDay()===0||(!admin&&new Date(d.getFullYear(),d.getMonth(),d.getDate()+1).getTime()<=Date.now()+864e5)?"disabled":""}>${d.getDate()}</button>`;}).join("")}</div></div>
       <div class="slots"><b class="muted">Horários disponíveis</b>${slots}${admin?"":`<span class="small muted">O agendamento precisa de pelo menos 24 horas de antecedência.</span>`}</div>
-      <div class="row" style="grid-column:1/-1"><input class="inp" id="ag-obs" placeholder="Observações" style="flex:1"><button class="btn primary" data-act="agsalvar">Salvar</button></div>
+      <div class="ag-campos" style="grid-column:1/-1">${camposHTML(A.def,A.f,"und")}<div class="row"><span class="spacer"></span><button class="btn primary" data-act="agsalvar">Salvar</button></div></div>
     </div></div>`;
 }
 const antecedenciaOk=str=>{ const d=parseAg(str); return !!d&&d.getTime()>=Date.now()+864e5; };

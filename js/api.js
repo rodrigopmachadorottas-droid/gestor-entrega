@@ -63,6 +63,7 @@ function normTarefa(t){
   ["obs","coluna","agendamento","autor"].forEach(k => { if(t[k] == null) t[k] = ""; });
   if(t.anexos == null) delete t.anexos;
   if(t.checklist == null) delete t.checklist;
+  if(t.campos == null) delete t.campos;
   if(t.assinatura == null) delete t.assinatura;
   return t;
 }
@@ -97,6 +98,8 @@ API.carregar = async function(comPassos){
   let laudos = [], horarios_excecoes = [];
   try{ laudos = await lerTudo("laudos"); }catch(_){ /* banco ainda sem a 06_atualizacao: segue sem laudos */ }
   try{ horarios_excecoes = await lerTudo("horarios_excecoes"); }catch(_){ /* banco ainda sem a 07_atualizacao */ }
+  let config = {};
+  try{ (await lerTudo("config_global", "*", "chave")).forEach(r => { config[r.chave] = r.valor; }); }catch(_){ /* banco ainda sem a 08_atualizacao */ }
   const P = S.perfil;
   const usuarios = pessoas.map((p, i) => ({ id: i + 1, login: p.login, nome: p.nome, foto: p.foto || "", perms: p.funcoes || [] }));
   const eu = { id: 0, login: P.login, nome: P.nome, email: P.email, foto: P.foto || "", perms: P.funcoes || [] };
@@ -107,7 +110,7 @@ API.carregar = async function(comPassos){
     obras: obras.map((o, i) => ({ ...o, hue: HUES[i % HUES.length],
       usuarios: acessos.filter(a => a.obra_id === o.id).map(a => a.login).join(", ") })),
     clientes, locais, horarios, unidades, areas,
-    tarefas: tarefas.map(normTarefa), tarefas_ac: tarefas_ac.map(normTarefa), laudos, horarios_excecoes
+    tarefas: tarefas.map(normTarefa), tarefas_ac: tarefas_ac.map(normTarefa), laudos, horarios_excecoes, config
   };
   API.tirarFoto();
   API.carregadoEm = Date.now();
@@ -244,7 +247,7 @@ API.enviarAcao = async function(a){
     p_tipo: a.tipo, p_id: reg.id, p_acao: a.acao, p_coluna: a.col || "",
     p_antes: a.antes, p_depois: a.depois,
     p_tarefa: { etapa_antiga: t.etapa_antiga, etapa_nova: t.etapa_nova, obs: t.obs || "", repeticao: t.repeticao,
-                agendamento: t.agendamento || "", anexos, checklist: t.checklist || null, assinatura: t.assinatura || null, laudo: a.laudo || null }
+                agendamento: t.agendamento || "", anexos, checklist: t.checklist || null, campos: t.campos || null, assinatura: t.assinatura || null, laudo: a.laudo || null }
   });
   if(error) throw error;
   const srv = normTarefa(data.tarefa);
@@ -343,6 +346,15 @@ API.trocarFotoObra = async function(obra, file){
   const r = await reduzirImagem(file, 1920, 1920, false);
   obra.foto_url = MODO_DEMO ? r.dataUrl : await enviarFoto(`obras/${obra.id}/${Date.now()}.jpg`, r.blob);
   saveDB();
+};
+
+/* ---------- configuração global (popups de ação...) · só admin grava ---------- */
+API.salvarConfig = async function(chave, valor){
+  DB.config = DB.config || {};
+  if(MODO_DEMO){ DB.config[chave] = valor; salvarLocal(); return; }
+  const { error } = await sb.from("config_global").upsert({ chave, valor, atualizado_em: new Date().toISOString(), atualizado_por: REAL_USER });
+  if(error) throw error;
+  DB.config[chave] = valor;
 };
 
 /* ---------- laudos ---------- */
