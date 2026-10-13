@@ -29,6 +29,9 @@ document.addEventListener("click",e=>{
 
     agdinfo(){ S.agdInfo=!S.agdInfo; },
     laudoinfo(){ S.laudoInfo=!S.laudoInfo; },
+    indmodo(){ S.ind.geralModo=el.dataset.v; },
+    indlista(){ const c=IND_CEL[+el.dataset.i]; if(c) S.indLista={...c}; },
+    indlistafechar(){ S.indLista=null; },
     agdabrir(){ S.popup={tipo:el.dataset.ac?"ac":"und",id}; S.agdInfo=false; },
     laudoaba(){ S.laudoAba=el.dataset.v; },
     laudoabrir(){ S.laudoRec={id,obs:"",arq:null}; },
@@ -247,6 +250,6 @@ document.addEventListener("submit",e=>{
   saveDB(); S.cli.edit=null; toast("Sucesso","Cliente salvo"); render();
 });
 document.addEventListener("keydown",e=>{ if(e.key!=="Escape") return;
-  if(S.imp) S.imp=null; else if(S.pdfCfg) S.pdfCfg=null; else if(S.laudoRec) S.laudoRec=null; else if(S.agdInfo) S.agdInfo=false; else if(S.conf) S.conf=null; else if(S.homeInd) S.homeInd=null; else if(S.menuAcoes) S.menuAcoes=false; else if(S.adminPanel) S.adminPanel=false; else if(S.navObras) S.navObras=false; else if(S.ag) S.ag=null; else if(S.popup) S.popup=null; else if(S.loc.modal) S.loc.modal=null; else if(S.popup) S.popup=null; else if(S.drawer) S.drawer=false; else if(S.nav) S.nav=false; else return; render(); });
+  if(S.imp) S.imp=null; else if(S.pdfCfg) S.pdfCfg=null; else if(S.laudoRec) S.laudoRec=null; else if(S.agdInfo) S.agdInfo=false; else if(S.conf) S.conf=null; else if(S.homeInd) S.homeInd=null; else if(S.menuAcoes) S.menuAcoes=false; else if(S.adminPanel) S.adminPanel=false; else if(S.navObras) S.navObras=false; else if(S.ag) S.ag=null; else if(S.popup) S.popup=null; else if(S.indLista) S.indLista=null; else if(S.loc.modal) S.loc.modal=null; else if(S.popup) S.popup=null; else if(S.drawer) S.drawer=false; else if(S.nav) S.nav=false; else return; render(); });
 
 /* O início do app fica em main.js */

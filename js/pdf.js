@@ -13,7 +13,9 @@ function carregarScript(src){ return new Promise((ok, falha) => { if(document.qu
 async function libsPdf(){ await carregarScript("js/vendor/html2canvas.min.js"); await carregarScript("js/vendor/jspdf.umd.min.js"); }
 
 /* ---------- popup de configuração ---------- */
-function abrirPdfCfg(){ S.pdfCfg = { visoes:{ unid:true, geral:false, aprov:false, usuarios:false }, etapas:[S.ind.etapa], rep:!!S.ind.rep }; }
+function abrirPdfCfg(){ const v = { "Visão Unidades":"unid", "Visão Geral":"geral", "Visão Aprovações":"aprov", "Visão Ações":"usuarios" }[S.ind.visao] || "unid";
+  const ops = indEtapas(), etapa = ops.some(o => o.id === S.ind.etapa) ? S.ind.etapa : ops[0].id;
+  S.pdfCfg = { visoes:{ unid:v === "unid", geral:v === "geral", aprov:v === "aprov", usuarios:v === "usuarios" }, etapas:[etapa], rep:!!S.ind.rep }; }
 function popupPdfCfg(){
   const C = S.pdfCfg, ops = indEtapas(), lider = can(ME(), "admin", "lider");
   const vis = PDF_VISOES.filter(([k]) => k !== "usuarios" || lider);
@@ -98,7 +100,7 @@ async function gerarPdf(){
   const C = S.pdfCfg, ops = indEtapas(), obra = OBRA();
   const paginas = [];
   if(C.visoes.unid) ops.filter(o => C.etapas.includes(o.id)).forEach(op => paginas.push(...paginasUnidades(op, !!C.rep && repSuporta(op))));
-  if(C.visoes.geral) paginas.push(paginaConteudo("Visão Geral", "Número de unidades por fase e etapa", indGeral()));
+  if(C.visoes.geral) paginas.push(paginaConteudo("Visão Geral", S.ind.geralModo === "acum" ? "Acumulado: unidades que já passaram por cada etapa" : "Número de unidades por fase e etapa (situação atual)", indGeral()));
   if(C.visoes.aprov) paginas.push(paginaConteudo("Visão Aprovações", "Unidades aprovadas por etapa e tentativa", indAprovacoes()));
   if(C.visoes.usuarios && can(ME(), "admin", "lider")) paginas.push(paginaConteudo("Dados por usuário", periodoTxt(), dadosPorUsuarioHTML()));
   if(!paginas.length){ toast("Aviso", "Nada para gerar", "Escolha uma visão com blocos visíveis."); return; }

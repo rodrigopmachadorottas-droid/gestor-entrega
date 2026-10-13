@@ -1088,3 +1088,60 @@ table.list td.obs-c>div{max-width:252px;white-space:nowrap;overflow:hidden;text-
 .pc-side .loc-abas{display:flex}
 .pc-side .loc-abas button{flex:1;white-space:nowrap;padding-inline:7.2px}
 @media (max-width:860px){ .screen.pcfg{grid-template-columns:1fr} }
+
+/* ---------- v2.1.15 ---------- */
+/* data e hora com calendário pequeno */
+.cf-dh-row{display:flex;gap:5.4px;align-items:center;flex-wrap:wrap}
+.cf-dh-dt{position:relative;flex:1 1 162px;min-width:153px}
+.cf-dh-btn{display:flex;align-items:center;gap:7.2px;text-align:left;cursor:pointer;font:inherit;color:var(--fg)}
+.cf-dh-btn.ph{color:var(--fg-3)}
+.cf-dh-btn svg{width:15.3px;height:15.3px;color:var(--fg-2);flex:none}
+.cf-dh-btn[aria-expanded="true"]{border-color:var(--primary)}
+.cf-dh-sel{width:auto!important;min-width:68.4px;flex:none}
+.cf-dh-sep{color:var(--fg-2)}
+.mcal{position:static;margin-top:5.4px;width:241.2px;max-width:100%;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 9px 25.2px rgba(0,0,0,.18);padding:7.2px 9px 9px}
+.mcal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:3.6px}
+.mcal-h b{text-transform:capitalize;font-size:.95rem}
+.mcal-h .iconbtn{width:27px;height:27px}
+.mcal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.mcal-g .wd{font-size:.72rem;color:var(--fg-3);font-weight:700;padding:3.6px 0}
+.mcal-g button{border:0;background:none;border-radius:5.4px;height:28.8px;font:inherit;font-size:.88rem;cursor:pointer;color:var(--fg)}
+.mcal-g button:hover{background:var(--primary-xxl);color:var(--primary-d)}
+.mcal-g button.hoje{box-shadow:inset 0 0 0 1.5px var(--primary-l)}
+.mcal-g button.sel{background:var(--primary);color:#fff;font-weight:700}
+/* tela Versões: linha do tempo centralizada */
+.screen.versoes{display:flex;justify-content:center}
+.ver-wrap{width:100%;max-width:738px;display:flex;flex-direction:column;gap:16.2px}
+.ver-hero{background:var(--surface);border-radius:var(--r);padding:18px 19.8px;display:flex;flex-direction:column;gap:2px;border-left:3.6px solid var(--primary);box-shadow:0 1px 2.7px rgba(0,0,0,.06)}
+.ver-hero b{font-size:2rem;font-weight:900;line-height:1.1}
+.ver-gh{font-size:1rem;margin:5.4px 0 9px;display:flex;gap:9px;align-items:baseline}
+.ver-gh .muted{font-weight:400;font-size:.88rem}
+.ver-tl{list-style:none;margin:0;padding:0 0 0 16.2px;position:relative;display:flex;flex-direction:column;gap:9px}
+.ver-tl::before{content:"";position:absolute;left:4.5px;top:5.4px;bottom:5.4px;width:2px;background:var(--border-2)}
+.ver-tl>li{position:relative}
+.ver-dot{position:absolute;left:-16.2px;top:12.6px;width:10.8px;height:10.8px;border-radius:50%;background:var(--surface);border:2px solid var(--border-2)}
+.ver-tl>li.atual .ver-dot{background:var(--primary);border-color:var(--primary)}
+.ver-card{background:var(--surface);border-radius:var(--r);padding:9.9px 12.6px;box-shadow:0 1px 2.7px rgba(0,0,0,.06)}
+.ver-tl>li.atual .ver-card{box-shadow:0 0 0 1.5px var(--primary-l)}
+.ver-top{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+.ver-card ul{margin:5.4px 0 0;padding-left:16.2px;color:var(--fg-2);font-size:.92rem}
+.ver-card ul li+li{margin-top:2px}
+.cf-dh-row{align-items:flex-start}
+.cf-dh-sep{line-height:34.2px}
+.ver-wrap{margin-inline:auto}
+main.screen.versoes{display:block}
+
+/* ---------- v2.1.16 ---------- */
+/* indicadores: Situação atual x Acumulado e células que abrem a lista de unidades */
+.ind-modo{display:inline-flex;flex:none}
+.ind-modo button{white-space:nowrap}
+table.kpi td.ind-cel{cursor:pointer;transition:box-shadow .12s}
+table.kpi td.ind-cel:hover,table.kpi td.ind-cel:focus-visible{box-shadow:inset 0 0 0 2px var(--primary);outline:0}
+.indl-b{display:flex;flex-direction:column;gap:7.2px}
+.indl-b+.indl-b{margin-top:5.4px}
+.indl-b h3{font-size:1rem;margin:0}
+.indl-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(57.6px,1fr));gap:5.4px}
+.indl-tiles .tile{border:0;height:37.8px;border-radius:5.4px;font:inherit;font-weight:600;cursor:pointer;color:var(--fg)}
+.indl-tiles .tile:hover{box-shadow:0 0 0 2px var(--fg)}
+.indl-leg{margin-top:3.6px}
+@media (max-width:860px){ .ind-modo{width:100%} .ind-modo button{flex:1} }

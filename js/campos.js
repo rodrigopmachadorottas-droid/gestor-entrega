@@ -84,7 +84,7 @@ function camposHTML(def, F, ctx){
   return def.map(c => {
     const ob = c.obrig ? ` <span class="obr" title="Obrigatório">*</span>` : "", id = `cf-${c.id}`;
     if(c.tipo === "obs") return `<div class="field"><label for="${id}">${esc(c.rotulo)}${ob}</label><textarea class="inp" id="${id}" data-cf="${c.id}" rows="3" placeholder="${c.obrig ? "Obrigatório" : "Opcional"}">${esc(F.v[c.id] || "")}</textarea></div>`;
-    if(c.tipo === "data") return `<div class="field"><label for="${id}">${esc(c.rotulo)}${ob}</label><input type="date" class="inp" id="${id}" data-cf="${c.id}" value="${esc(F.v[c.id] || "")}" style="max-width:198px"></div>`;
+    if(c.tipo === "data") return campoDataHora(c, F, ob);
     if(c.tipo === "lista") return `<div class="field"><label for="${id}">${esc(c.rotulo)}${ob}</label><select class="inp" id="${id}" data-cf="${c.id}"><option value="">Selecione</option>${(c.opcoes || []).map(o => `<option ${o === F.v[c.id] ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></div>`;
     if(c.tipo === "simnao"){ const v = F.sn[c.id] || (c.obrig ? "" : "Não");
       return `<div class="engbox"><div class="row"><b>${esc(c.rotulo)}${ob}</b><span class="spacer"></span><div class="seg"><button class="${v === "Não" ? "on" : ""}" data-act="cfsim" data-id="${c.id}" data-v="Não">Não</button><button class="${v === "Sim" ? "on" : ""}" data-act="cfsim" data-id="${c.id}" data-v="Sim">Sim</button></div></div>
@@ -106,6 +106,32 @@ function camposHTML(def, F, ctx){
 // cor do botão marcado: opção "ok" verde; problemas alternam vermelho/laranja
 function ckCls(o, ops){ if(o.tipo === "ok") return "ck-ok"; const k = ops.filter(x => x.tipo !== "ok").indexOf(o); return k % 2 ? "ck-acabamento" : "ck-construtivo"; }
 
+/* ---------- data e hora com calendário (agendar vistoria do síndico) ---------- */
+const MESES_PT = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+function campoDataHora(c, F, ob){
+  const v = F.v[c.id] || "", hora = F.v[c.id + "_h"] || "09:00", [hh, mm] = hora.split(":"), aberto = F.cal && F.cal.id === c.id;
+  const txt = v ? (() => { const [y, m, d] = v.split("-"); return `${d}/${m}/${y}`; })() : "Escolher data";
+  let cal = "";
+  if(aberto){ const M = F.cal.mes, ini = new Date(M.getFullYear(), M.getMonth(), 1), hoje = isoData(new Date()), dias = [];
+    for(let i = 0; i < ini.getDay(); i++) dias.push("<span></span>");
+    const n = new Date(M.getFullYear(), M.getMonth() + 1, 0).getDate();
+    for(let d = 1; d <= n; d++){ const iso = isoData(new Date(M.getFullYear(), M.getMonth(), d));
+      dias.push(`<button type="button" class="${iso === v ? "sel" : ""} ${iso === hoje ? "hoje" : ""}" data-act="cfcaldia" data-id="${c.id}" data-v="${iso}">${d}</button>`); }
+    cal = `<div class="mcal" role="dialog" aria-label="Calendário"><div class="mcal-h"><button type="button" class="iconbtn" data-act="cfcalmes" data-d="-1" aria-label="Mês anterior">${IC.chevL}</button>
+      <b>${MESES_PT[M.getMonth()]} ${M.getFullYear()}</b><button type="button" class="iconbtn" data-act="cfcalmes" data-d="1" aria-label="Próximo mês">${IC.chevR}</button></div>
+      <div class="mcal-g">${["D","S","T","Q","Q","S","S"].map(w => `<span class="wd">${w}</span>`).join("")}${dias.join("")}</div></div>`; }
+  const horas = Array.from({ length:24 }, (_, h) => pad(h)), mins = Array.from({ length:12 }, (_, k) => pad(k * 5));
+  return `<div class="field cf-dh"><label>${esc(c.rotulo)}${ob}</label><div class="cf-dh-row">
+    <div class="cf-dh-dt"><button type="button" class="inp cf-dh-btn ${v ? "" : "ph"}" data-act="cfcal" data-id="${c.id}" aria-expanded="${aberto}">${IC.calendar}<span>${esc(txt)}</span></button>${cal}</div>
+    <select class="inp cf-dh-sel" data-cf="${c.id}_h" data-hp="h" aria-label="Hora">${horas.map(h => `<option ${h === hh ? "selected" : ""}>${h}</option>`).join("")}</select><b class="cf-dh-sep">:</b>
+    <select class="inp cf-dh-sel" data-cf="${c.id}_h" data-hp="m" aria-label="Minutos">${mins.map(m => `<option ${m === mm ? "selected" : ""}>${m}</option>`).join("")}</select></div></div>`;
+}
+Object.assign(ACOES_EXTRA, {
+  cfcal(el){ const F = formAtual(); if(!F) return; if(F.cal && F.cal.id === el.dataset.id){ F.cal = null; return; } const v = F.v[el.dataset.id], b = v ? new Date(v + "T00:00") : new Date(); F.cal = { id:el.dataset.id, mes:new Date(b.getFullYear(), b.getMonth(), 1) }; },
+  cfcalmes(el){ const F = formAtual(); if(!F || !F.cal) return; const m = F.cal.mes; F.cal.mes = new Date(m.getFullYear(), m.getMonth() + +el.dataset.d, 1); },
+  cfcaldia(el){ const F = formAtual(); if(!F) return; F.v[el.dataset.id] = el.dataset.v; if(!F.v[el.dataset.id + "_h"]) F.v[el.dataset.id + "_h"] = "09:00"; F.cal = null; }
+});
+
 /* ---------- validação e coleta ---------- */
 function validarCampos(def, F, acao){
   for(const c of def){
@@ -126,7 +152,7 @@ function coletarCampos(def, F){
   def.forEach(c => {
     const v = String(F.v[c.id] || "").trim();
     if(c.tipo === "obs"){ if(!obsTxt) obsTxt = v; else if(v) o.campos.push({ r:c.rotulo, v }); }
-    else if(c.tipo === "data"){ if(v){ const [y, m, d] = v.split("-"); o.agendamento = `${d}/${m}/${y}`; } }
+    else if(c.tipo === "data"){ if(v){ const [y, m, d] = v.split("-"); o.agendamento = `${d}/${m}/${y} ${F.v[c.id + "_h"] || "09:00"}`; } }
     else if(c.tipo === "lista"){ if(c.principal && !principal) principal = v; else if(v) o.campos.push({ r:c.rotulo, v }); }
     else if(c.tipo === "simnao"){ const r = F.sn[c.id] || (c.obrig ? "" : "Não"); if(!r) return; const t = (F.snt[c.id] || "").trim();
       o.campos.push({ r:c.rotulo, v:r + (r === "Sim" && t ? ` · ${t}` : "") }); if(r === "Sim" && c.laudo) o.laudo = { engenheiro:t }; }
@@ -172,9 +198,9 @@ function telaPopups(){
   const cards = def.map((c, i) => campoEditor(c, i, def.length)).join("") || `<div class="empty" style="padding:24px"><b>Sem campos</b><span>O popup só vai pedir a confirmação.</span></div>`;
   if(!P.prev) P.prev = formVazio();
   return head + `<main class="screen pcfg">
-    <aside class="panel pc-side"><div class="seg loc-abas" role="tablist"><button class="${P.aba !== "ac" ? "on" : ""}" role="tab" aria-selected="${P.aba !== "ac"}" data-act="pcfgaba" data-v="und">Unidades</button><button class="${P.aba === "ac" ? "on" : ""}" role="tab" aria-selected="${P.aba === "ac"}" data-act="pcfgaba" data-v="ac">Áreas comuns</button></div>
+    <aside class="panel pc-side" id="pc-side" data-keep-scroll><div class="seg loc-abas" role="tablist"><button class="${P.aba !== "ac" ? "on" : ""}" role="tab" aria-selected="${P.aba !== "ac"}" data-act="pcfgaba" data-v="und">Unidades</button><button class="${P.aba === "ac" ? "on" : ""}" role="tab" aria-selected="${P.aba === "ac"}" data-act="pcfgaba" data-v="ac">Áreas comuns</button></div>
       <p class="small muted" style="margin:8px 0">Vale para todas as obras. Escolha a ação para editar os campos do popup.</p>${lista}</aside>
-    <section class="pc-main"><div class="panel pc-ed"><div class="row"><div><div class="small muted">${esc(nm.etapa)}</div><h2 class="h2" style="margin:0">${esc(nm.acao)}</h2></div><span class="spacer"></span>
+    <section class="pc-main"><div class="panel pc-ed" id="pc-ed"><div class="row"><div><div class="small muted">${esc(nm.etapa)}</div><h2 class="h2" style="margin:0">${esc(nm.acao)}</h2></div><span class="spacer"></span>
         ${ehPadrao(key) ? `<span class="pill s-neutral">Padrão</span>` : `<button class="btn sm ghost" data-act="pcfgpadrao">Voltar ao padrão</button>`}</div>
       <div class="pc-cards">${cards}</div>
       <div class="dd-wrap" style="align-self:flex-start"><button class="btn primary sm btn-ic" data-act="pcfgadd">${IC.plus}Adicionar campo</button>${addMenu}</div></div>
@@ -244,6 +270,7 @@ const defAtual = () => S.conf ? S.conf.def : S.ag ? S.ag.def : [];
 
 /* ---------- digitação/troca nos campos ---------- */
 INPUT_EXTRA.push(t => {
+  if(t.dataset.hp){ const F = formAtual(); if(F){ const [h, m] = (F.v[t.dataset.cf] || "09:00").split(":"); F.v[t.dataset.cf] = t.dataset.hp === "h" ? `${t.value}:${m}` : `${h}:${t.value}`; return true; } }
   if(t.dataset.cf != null){ const F = formAtual(); if(F){ F.v[t.dataset.cf] = t.value; return true; } }
   if(t.dataset.cft != null){ const F = formAtual(); if(F){ F.snt[t.dataset.cft] = t.value; return true; } }
   if(S.pcfg && t.dataset.ci != null){
