@@ -12,28 +12,41 @@ function meusApelidos(){
   return apelidosDe({ ...(S.perfil || {}), nome:(S.perfil && S.perfil.nome) || ME().nome });
 }
 
-/* ---------- frase da tela inicial (mesma lógica do Power Apps) ---------- */
+/* ---------- frase da tela inicial (regras editáveis pelo admin em "Definir frases") ---------- */
 const sorteia = L => L[Math.floor(Math.random() * L.length)];
-function fraseDoDia(nome, agora = new Date()){
-  const h = agora.getHours(), m = agora.getMinutes(), dia = agora.getDay(); // 0 dom ... 6 sáb
-  const sortDia = 1 + Math.floor(Math.random() * 3), n = nome;
-  // segunda, sexta e fim de semana: 2 em 3 vezes usa a frase do dia; na outra, a do horário
-  if(dia === 1 && sortDia < 3) return [`Segundouuu, ${n}!`, `A temida segunda-feira né, ${n}?`][sortDia - 1];
-  if(dia === 5 && sortDia < 3) return [`Sextoooou, ${n}!`, `Sextou, ${n}! Quem fez, fez...`][sortDia - 1];
-  if((dia === 0 || dia === 6) && sortDia < 3) return [`Trabalhando no fim de semana, ${n}?`, `Até no fim de semana, ${n}?`][sortDia - 1];
-  if(h < 8 || (h === 8 && m < 30)) return sorteia([`Bom dia, ${n}! Acordou cedo hein?`, `Cedinho hein, ${n}!`, `Primeiro a chegar, ${n}?`, `Bom dia, ${n}! Madrugou hoje.`, `Que disposição, ${n}!`]);
-  if(h < 12) return sorteia([`Bom dia, ${n}!`, `Bora começar, ${n}!`, `E aí, ${n}? Bom dia!`, `Cadê o café, ${n}?`, `Bom dia, ${n}! Bora render.`]);
-  if(h === 12 || (h === 13 && m < 10)) return sorteia([`Já almoçou, ${n}?`, `Bora de almoço, ${n}?`, `Hora do rango, ${n}!`, `Bateu a fome, ${n}?`, `Pausa pro almoço, ${n}!`]);
-  if(h < 16) return sorteia([`Boa tarde, ${n}!`, `Segurando a soneca, ${n}?`, `Pós-almoço bateu, ${n}?`, `Sono batendo, ${n}?`, `Um café resolve, ${n}?`]);
-  if(h < 18) return sorteia([`Reta final, ${n}!`, `Já deu né? Deixa um pouco pra amanhã, ${n}.`, `Fim de expediente, ${n}?`, `Aguenta firme, ${n}!`, `Fechando o dia, ${n}?`]);
-  return sorteia([`Trabalhando essas horas, ${n}?`, `Ainda por aqui, ${n}?`, `Boa noite, ${n}! Vai descansar.`, `Workaholic hein, ${n}?`, `Madrugando, ${n}?`]);
+// padrão = as regras do Power Apps. @apelido vira o apelido sorteado da pessoa.
+const FRASES_PADRAO = () => ({
+  dias:[
+    { id:"seg", nome:"Segunda-feira", dias:[1], chance:67, frases:["Segundouuu, @apelido!", "A temida segunda-feira né, @apelido?"] },
+    { id:"sex", nome:"Sexta-feira", dias:[5], chance:67, frases:["Sextoooou, @apelido!", "Sextou, @apelido! Quem fez, fez..."] },
+    { id:"fds", nome:"Fim de semana", dias:[6, 0], chance:67, frases:["Trabalhando no fim de semana, @apelido?", "Até no fim de semana, @apelido?"] }],
+  horarios:[
+    { id:"cedo", nome:"Bem cedo", ini:"00:00", fim:"08:29", frases:["Bom dia, @apelido! Acordou cedo hein?", "Cedinho hein, @apelido!", "Primeiro a chegar, @apelido?", "Bom dia, @apelido! Madrugou hoje.", "Que disposição, @apelido!"] },
+    { id:"manha", nome:"Manhã", ini:"08:30", fim:"11:59", frases:["Bom dia, @apelido!", "Bora começar, @apelido!", "E aí, @apelido? Bom dia!", "Cadê o café, @apelido?", "Bom dia, @apelido! Bora render."] },
+    { id:"almoco", nome:"Almoço", ini:"12:00", fim:"13:09", frases:["Já almoçou, @apelido?", "Bora de almoço, @apelido?", "Hora do rango, @apelido!", "Bateu a fome, @apelido?", "Pausa pro almoço, @apelido!"] },
+    { id:"tarde1", nome:"Pós-almoço", ini:"13:10", fim:"15:59", frases:["Boa tarde, @apelido!", "Segurando a soneca, @apelido?", "Pós-almoço bateu, @apelido?", "Sono batendo, @apelido?", "Um café resolve, @apelido?"] },
+    { id:"tarde2", nome:"Acabando o dia", ini:"16:00", fim:"17:59", frases:["Reta final, @apelido!", "Já deu né? Deixa um pouco pra amanhã, @apelido.", "Fim de expediente, @apelido?", "Aguenta firme, @apelido!", "Fechando o dia, @apelido?"] },
+    { id:"noite", nome:"Noite", ini:"18:00", fim:"23:59", frases:["Trabalhando essas horas, @apelido?", "Ainda por aqui, @apelido?", "Boa noite, @apelido! Vai descansar.", "Workaholic hein, @apelido?", "Madrugando, @apelido?"] }]
+});
+const cfgFrases = () => { const c = DB.config && DB.config.frases; return c && Array.isArray(c.horarios) ? c : FRASES_PADRAO(); };
+const hhmm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const noIntervalo = (t, r) => r.ini <= r.fim ? t >= r.ini && t <= r.fim : t >= r.ini || t <= r.fim;   // aceita intervalo que vira a meia-noite
+const comApelido = (f, nome) => String(f).replace(/@apelido/gi, nome);
+// devolve {txt, regra}: primeiro tenta as regras de dia (cada uma com a sua chance); se não sair, usa a do horário
+function fraseDoDia(nome, agora = new Date(), cfg = cfgFrases()){
+  for(const r of cfg.dias || []){
+    if(!(r.dias || []).includes(agora.getDay()) || !(r.frases || []).length) continue;
+    if(Math.random() * 100 < (r.chance ?? 67)) return { txt:comApelido(sorteia(r.frases), nome), regra:r.nome };
+  }
+  const t = hhmm(agora), h = (cfg.horarios || []).find(r => (r.frases || []).length && noIntervalo(t, r));
+  return h ? { txt:comApelido(sorteia(h.frases), nome), regra:h.nome } : { txt:`Olá, ${nome}!`, regra:"padrão" };
 }
-// a frase fica a mesma enquanto não muda o período do dia (não troca a cada clique)
-function periodoDoDia(d = new Date()){ const h = d.getHours(), m = d.getMinutes(); return h < 8 || (h === 8 && m < 30) ? 0 : h < 12 ? 1 : h === 12 || (h === 13 && m < 10) ? 2 : h < 16 ? 3 : h < 18 ? 4 : 5; }
+// a frase fica a mesma enquanto não muda a faixa de horário (não troca a cada clique)
+function periodoDoDia(d = new Date()){ const t = hhmm(d); return (cfgFrases().horarios || []).findIndex(r => noIntervalo(t, r)); }
 function saudacaoHome(){
   const L = S.user === REAL_USER ? meusApelidos() : apelidosDe(ME()), d = new Date();
-  const k = [d.toDateString(), periodoDoDia(d), S.user, L.join("|")].join("#");
-  if(!S.saud || S.saud.k !== k) S.saud = { k, txt:fraseDoDia(sorteia(L), d) };
+  const k = [d.toDateString(), periodoDoDia(d), S.user, L.join("|"), JSON.stringify(cfgFrases()).length].join("#");
+  if(!S.saud || S.saud.k !== k){ const f = fraseDoDia(sorteia(L), d); S.saud = { k, txt:f.txt, regra:f.regra }; }
   return S.saud.txt;
 }
 

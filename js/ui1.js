@@ -28,6 +28,7 @@ const IC={
   plus:sv('<path d="M12 5v14M5 12h14"/>'),
   trash:sv('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
   edit:sv('<path d="M4 20h4L19 9l-4-4L4 16z"/>'),
+  chat:sv('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>'),
   settings:sv('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
   chevL:sv('<path d="M15 18l-6-6 6-6"/>'), chevR:sv('<path d="M9 18l6-6-6-6"/>'), chevD:sv('<path d="M6 9l6 6 6-6"/>'), chevU:sv('<path d="M6 15l6-6 6 6"/>'),
   dots:sv('<circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>',1),
@@ -39,7 +40,7 @@ const IC={
   upload:sv('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.9";
+const VERSAO="v2.1.10";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -78,7 +79,7 @@ function telaHome(){
   const u=ME();
   const obras=[...DB.obras].filter(o=>o.ativa!==false||can(u,"admin")).sort((a,b)=>a.ordem-b.ordem);
   const acesso=o=>can(u,"admin")||(", "+o.usuarios+", ").includes(", "+u.login+", ");
-  return `<div class="home-z"><div class="home-top"><div class="wrap"><b>Controle das Unidades | Excelência Operacional</b><span class="home-ola"><b>${esc(saudacaoHome())}</b>${topoAcoes()}</span></div></div>
+  return `<div class="home-z"><div class="home-top"><div class="wrap"><b>Controle das Unidades | Excelência Operacional</b><span class="home-ola">${can(userByLogin(REAL_USER),"admin")?`<button class="ola-btn" data-act="refrase" title="Clique para sortear outra frase (só admin) · regra: ${esc((S.saud&&S.saud.regra)||"")}"><b>${esc(saudacaoHome())}</b></button>`:`<b>${esc(saudacaoHome())}</b>`}${topoAcoes()}</span></div></div>
   <section class="home-hero">
     <button class="logo-btn" data-act="adminpanel" aria-label="Gestor de Entrega"><img class="logo" src="${isDark()?LOGOS.branca:LOGOS.preta}" alt="Gestor de Entrega"></button>
     ${podeIndGerais(u)?`<button class="iconbtn home-dash ${S.homeInd?"on":""}" data-act="homeind" aria-label="Indicadores gerais das obras" title="Indicadores gerais">${io("indicadores")}</button>`:""}
@@ -144,8 +145,10 @@ function painelAdmin(){
     <select id="sim-user" class="inp" data-act-change="simsel" aria-label="Usuário"><option value="">Selecione o usuário</option>${DB.usuarios.map(x=>`<option value="${x.login}" ${x.login===S.simSel?"selected":""}>${esc(x.nome)} · ${x.perms.includes("admin")?"Admin":esc(x.perms.map(p=>PERM_NOME[p]).join(", "))}</option>`).join("")}</select>
     <button class="btn primary" data-act="simular">Simular Acesso</button>
     ${S.user!==REAL_USER?`<p class="small muted" style="margin:0">Simulando: <b>${esc(ME().nome)}</b></p><button class="btn ghost sm" data-act="simvoltar">Voltar para o meu acesso</button>`:""}
-    ${MODO_DEMO?"":`<h3 class="ap-sub">Usuários</h3><button class="btn dark ap-usr" data-act="usuarios">${IC.users}Gerenciar usuários${nU?`<span class="sb-badge">${nU}</span>`:""}</button>`}
-    <h3 class="ap-sub">Popups de ação</h3><button class="btn dark ap-usr" data-act="popupscfg">${IC.edit}Configurar campos dos popups</button>
+    <h3 class="ap-sub">Funções</h3>
+    ${MODO_DEMO?"":`<button class="btn dark ap-usr" data-act="usuarios">${IC.users}Gerenciar usuários${nU?`<span class="sb-badge">${nU}</span>`:""}</button>`}
+    <button class="btn dark ap-usr" data-act="popupscfg">${IC.edit}Configurar campos das etapas</button>
+    <button class="btn dark ap-usr" data-act="frasescfg">${IC.chat||IC.edit}Definir frases</button>
     <button class="iconbtn temabtn" data-act="tema" aria-label="${isDark()?"Usar tema claro":"Usar tema escuro"}">${isDark()?io("moon"):io("sun")}</button>
     <span class="spacer"></span>
     ${MODO_DEMO?`<div class="proto"><span class="eyebrow">Modo demonstração</span><span class="small muted">Dados fictícios. As alterações ficam só neste navegador.</span>

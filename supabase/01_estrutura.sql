@@ -865,7 +865,7 @@ declare
   it jsonb; u record; v_st text; v_mot text; v_out jsonb := '[]'::jsonb; v_tar jsonb; v_lin jsonb;
 begin
   if v_login is null then raise exception 'sem_acesso: usuário não aprovado'; end if;
-  if not tenho_funcao('financeiro') then raise exception 'sem_permissao: só admin ou Financeiro'; end if;
+  if not (tenho_funcao('financeiro') or (tenho_funcao('rc') and tenho_funcao('lider'))) then raise exception 'sem_permissao: só admin, Financeiro ou líder do RC'; end if;
   if jsonb_typeof(p_itens) <> 'array' or jsonb_array_length(p_itens) > 2000 then raise exception 'lista inválida'; end if;
   for it in select * from jsonb_array_elements(p_itens) loop
     v_st := it->>'status'; v_mot := left(coalesce(it->>'motivo',''), 200);

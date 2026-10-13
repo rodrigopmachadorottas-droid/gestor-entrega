@@ -8,7 +8,7 @@
 const FIN_STATUS = ["Pendente", "Liberado", "Bloqueado"];
 const FIN_MOTIVOS = { Liberado:["Quitado, não necessita termo", "Termo assinado", "Permuta"], Bloqueado:["Pendente assinatura do termo", "Pendente assinatura financiamento", "Inadimplente"] };
 const finStatus = u => u.financeiro_status || (u.id_cliente ? "Pendente" : "");
-const podeFinanceiro = u => can(u, "admin", "financeiro");
+const podeFinanceiro = u => can(u, "admin", "financeiro") || (can(u, "rc") && can(u, "lider"));   // líder do RC também
 const normTxt = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 function finRasc(){ return (S.fin = S.fin || { busca:"", filtro:"todos", rasc:{}, imp:null }); }
