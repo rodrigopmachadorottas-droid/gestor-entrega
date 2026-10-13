@@ -145,10 +145,10 @@ function painelAdmin(){
     <select id="sim-user" class="inp" data-act-change="simsel" aria-label="Usuário"><option value="">Selecione o usuário</option>${DB.usuarios.map(x=>`<option value="${x.login}" ${x.login===S.simSel?"selected":""}>${esc(x.nome)} · ${x.perms.includes("admin")?"Admin":esc(x.perms.map(p=>PERM_NOME[p]).join(", "))}</option>`).join("")}</select>
     <button class="btn primary" data-act="simular">Simular Acesso</button>
     ${S.user!==REAL_USER?`<p class="small muted" style="margin:0">Simulando: <b>${esc(ME().nome)}</b></p><button class="btn ghost sm" data-act="simvoltar">Voltar para o meu acesso</button>`:""}
-    <h3 class="ap-sub">Funções</h3>
+    <h3 class="ap-sub">Funções</h3><div class="ap-funcs">
     ${MODO_DEMO?"":`<button class="btn dark ap-usr" data-act="usuarios">${IC.users}Gerenciar usuários${nU?`<span class="sb-badge">${nU}</span>`:""}</button>`}
     <button class="btn dark ap-usr" data-act="popupscfg">${IC.edit}Configurar campos das etapas</button>
-    <button class="btn dark ap-usr" data-act="frasescfg">${IC.chat||IC.edit}Definir frases</button>
+    <button class="btn dark ap-usr" data-act="frasescfg">${IC.chat||IC.edit}Definir frases</button></div>
     <button class="iconbtn temabtn" data-act="tema" aria-label="${isDark()?"Usar tema claro":"Usar tema escuro"}">${isDark()?io("moon"):io("sun")}</button>
     <span class="spacer"></span>
     ${MODO_DEMO?`<div class="proto"><span class="eyebrow">Modo demonstração</span><span class="small muted">Dados fictícios. As alterações ficam só neste navegador.</span>
