@@ -56,7 +56,9 @@ function cliCadastro(){
 }
 
 /* ================= TELA: PERFIL ================= */
-const PERM_DESC={lider:"Liderança da área: vê Informações Extras e Dados por usuário; com RC, cuida do cadastro de clientes.",admin:"Acesso completo: todas as obras, todas as ações, as configurações e a gestão de usuários.",obra:"Libera testes, corrige pendências, finaliza unidades e cadastra locais e horários.",instalacoes:"Aprova e reprova os testes de esgoto, água fria, dreno, gás e elétrico.",qualidade:"Faz as vistorias Qualidade, Prévia, do Cliente e do Síndico e configura os horários.",rc:"Agenda as vistorias com os clientes e cuida do cadastro de clientes.",financeiro:"Acompanha a fase de Entrega e o status financeiro das unidades.",arquitetura:"Aprova e reprova a vistoria de Arquitetura das áreas comuns."};
+const PERM_DESC={lider:"Liderança da área: vê Informações Extras, a Visão Ações e os Dados por usuário.",admin:"Acesso completo: todas as obras, todas as ações, as configurações e a gestão de usuários.",obra:"Libera testes, corrige pendências, finaliza unidades e cadastra locais e horários.",instalacoes:"Aprova e reprova os testes de esgoto, água fria, dreno, gás e elétrico.",qualidade:"Faz as vistorias Qualidade, Prévia, do Cliente e do Síndico e configura os horários.",rc:"Agenda as vistorias com os clientes e acompanha os laudos dos engenheiros.",financeiro:"Acompanha a fase de Entrega e o status financeiro das unidades.",arquitetura:"Aprova e reprova a vistoria de Arquitetura das áreas comuns."};
+// descrição da função para a pessoa: o líder que também é RC cuida de clientes e da análise financeira
+function permDesc(p,u){ let t=PERM_DESC[p]||""; if(p==="lider"&&can(u,"rc")) t+=" Como também é RC, cuida do cadastro de clientes e da Análise Financeira."; return t; }
 function prefsPerfil(u){
   const P=(S.perfil||{}).prefs||{}, tela=telaInicialObra(), ops=TELAS_INICIAIS.filter(([k])=>k!=="agenda"||can(u,"admin","obra","qualidade","rc"));
   return `<section class="panel prefs"><h2 class="h3">Preferências</h2>
@@ -83,7 +85,7 @@ function telaPerfil(){
     ${u.login===REAL_USER?prefsPerfil(u):""}
     <div class="kpis">${[["Tarefas feitas",T.length],["Últimos 30 dias",dias(30)],["Últimos 7 dias",dias(7)],["Obras com atividade",new Set(T.map(t=>t.id_obra)).size]].map(([l,v])=>`<div class="panel kpi-tile"><span class="eyebrow">${l}</span><b class="tnum">${v}</b></div>`).join("")}</div>
     <div class="perfil-grid">
-      <section class="panel"><h2 class="h3">O que você pode fazer</h2><ul class="perm-list">${u.perms.map(p=>`<li><b>${esc(PERM_NOME[p]||p)}</b><span class="muted small">${esc(PERM_DESC[p]||"")}</span></li>`).join("")}</ul></section>
+      <section class="panel"><h2 class="h3">O que você pode fazer</h2><ul class="perm-list">${u.perms.map(p=>`<li><b>${esc(PERM_NOME[p]||p)}</b><span class="muted small">${esc(permDesc(p,u))}</span></li>`).join("")}</ul></section>
       <section class="panel"><h2 class="h3">Tarefas por tipo</h2>${porAcao.length?`<ul class="bars">${porAcao.map(([a,n])=>`<li><span>${a}</span><i><b class="${ACAO_CLS[a]}" style="width:${Math.max(3,n/max*100)}%"></b></i><span class="tnum">${n}</span></li>`).join("")}</ul>`:`<p class="muted">Você ainda não fez nenhuma tarefa.</p>`}
         ${porObra.length?`<h2 class="h3" style="margin-top:16.2px">Por obra</h2><ul class="perm-list">${porObra.map(([o,n])=>`<li class="row" style="flex-direction:row"><span>${esc(o.nome)}</span><span class="spacer"></span><b class="tnum">${n}</b></li>`).join("")}</ul>`:""}</section>
     </div>

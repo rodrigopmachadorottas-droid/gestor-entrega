@@ -65,7 +65,7 @@ async function posLogin(){
   S.auth={tela:"carregando",passo:{t:"Validando login",s:"Conferindo a sessão no Supabase"}}; render();
   const { data:{ user } } = await sb.auth.getUser();
   if(!user){ S.auth={tela:"entrar"}; render(); return; }
-  passo("Validando login",`Buscando o perfil de ${user.email} e as permissões`);
+  passo("Validando login",`Buscando o perfil de ${String(user.email||"").split("@")[0]}`);
   let p=null;
   for(let i=0;i<4&&!p;i++){ const { data } = await sb.from("perfis").select("*").eq("id",user.id).maybeSingle(); p=data; if(!p) await esperar(700); }
   if(!p){ S.auth={tela:"erro",erro:"Não encontramos o seu perfil. Fale com o administrador (o script 01_estrutura.sql foi rodado?)."}; render(); return; }

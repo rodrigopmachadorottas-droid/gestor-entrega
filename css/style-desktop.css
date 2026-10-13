@@ -14,13 +14,7 @@
   --f-body:"Lato","Segoe UI",system-ui,sans-serif;
   --r:7.2px; --logo-filter:invert(.8); --tb:52.2px; --hover:rgba(0,0,0,.09);
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --top:#212329; --top-fg:#D7D7D8;
-  --bg:#131518; --surface:#212329; --surface-2:#2A2C32; --input:#2E3036; --input-hover:#33353A;
-  --fg:#D7D7D8; --fg-2:#A6A7A9; --fg-3:#7D7E82; --border:#2E3036; --border-2:#3E4045;
-  --btn-dark:#3E4045; --neutral-s:#3E4045; --primary-xxl:#33353A; --primary-xl:#494B50;
-  --ok-t:#81C784; --bad-t:#EF9A9A; --scrim:rgba(0,0,0,.55); --shadow:0 5.4px 21.6px rgba(0,0,0,.5); --logo-filter:none; --hover:rgba(255,255,255,.08);
-  color-scheme:dark }}
+/* tema escuro só quando a pessoa escolhe (padrão: claro, mesmo com o sistema no escuro) */
 :root[data-theme="dark"]{
   --top:#212329; --top-fg:#D7D7D8;
   --bg:#131518; --surface:#212329; --surface-2:#2A2C32; --input:#2E3036; --input-hover:#33353A;
@@ -509,8 +503,6 @@ table.list tr.sel td{background:var(--primary-xxl)}
 
 /* ===================== v2.0.2 ===================== */
 :root{--sh-bg:#e1e1e1;--th-bg:#cfcfcf;--loc-side:#e9e9e9;--loc-main:#f3f3f3;--loc-p:#dedede}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--sh-bg:#2E3036;--th-bg:#3A3C41;--loc-side:#1a1c20;--loc-main:#131518;--loc-p:#2A2C32;
-  --top:#FF9114;--top-fg:#ffffff;--scrim:rgba(19,21,24,.35)}}
 :root[data-theme="dark"]{--sh-bg:#2E3036;--th-bg:#3A3C41;--loc-side:#1a1c20;--loc-main:#131518;--loc-p:#2A2C32;--top:#FF9114;--top-fg:#ffffff;--scrim:rgba(19,21,24,.35)}
 .stagebox .sh{background:var(--sh-bg)}
 table.grid th,table.grid th.fz{background:var(--th-bg)}
@@ -1036,3 +1028,30 @@ select.inp option:nth-child(even){background:#F4F4F3}
 .fr-dias button{border:1px solid var(--border-2);background:var(--surface);border-radius:5.4px;padding:5.4px 9px;font:inherit;font-weight:600;cursor:pointer;color:var(--fg)}
 .fr-dias button.on{background:var(--primary);border-color:var(--primary);color:#fff}
 @media (max-width:1000px){ .fr-cols{grid-template-columns:1fr} .fr-intro{flex-direction:column} }
+
+/* ---------- v2.1.11 ---------- */
+/* configurações gerais: foto de capa com a largura dela (altura fixa) e botão embaixo */
+.capa{flex-direction:column;align-items:flex-start;gap:9px}
+.capa img{width:auto;height:135px;max-width:100%;object-fit:contain;background:var(--surface-2)}
+.capa-vazia{width:198px;height:135px}
+/* tela inicial: fundo cinza claro enquanto a foto da obra carrega */
+.obra .foto{background:var(--input)}
+/* menu lateral: linha antes dos dados da pessoa */
+.sb-userrow{border-top:1px solid var(--border);padding-top:9px;margin-top:2px}
+/* celular: só as obras que a pessoa tem acesso */
+@media (max-width:860px){ .obras .obra:disabled{display:none} }
+/* visão hierarquia */
+.hb-body{padding:9px}
+.hb-h,.hp-h{display:flex;align-items:center;gap:9px}
+.ht{flex-direction:row;align-items:baseline;gap:9px;flex-wrap:wrap}
+.ht .small.muted::before{content:"·";margin-right:9px;color:var(--fg-3)}
+.hb-h:hover{background:none}
+.hb{transition:box-shadow .12s}
+.hb:has(>.hb-h:hover){box-shadow:0 0 0 1.5px var(--primary-l),0 1px 2.7px rgba(0,0,0,.08)}
+.hb-h:hover .hchev,.hp-h:hover .hchev{color:var(--primary)}
+.hier-obra{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.hier-obra b{font-size:1.15rem}
+@media (max-width:860px){ .hb-h,.hp-h{display:flex} }
+
+/* ---------- v2.1.12 ---------- */
+.boot-msg{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(324px,90vw)}

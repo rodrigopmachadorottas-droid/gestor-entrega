@@ -15,7 +15,7 @@ async function iniciar(){
   sb.auth.onAuthStateChange(ev=>{ if(ev==="SIGNED_OUT"&&!S.saindo){ S.auth={tela:"entrar",msg:"Sua sessão terminou. Entre de novo."}; render(); } });
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") API.autoAtualizar(); });
   window.addEventListener("beforeunload",e=>{ if(API.ocupado||API.fila.length){ e.preventDefault(); e.returnValue=""; } });
-  passo("Validando login","Verificando se você já entrou neste aparelho");
+  passo("Validando login","Verificando o acesso neste aparelho");
   const { data:{ session } } = await sb.auth.getSession();
   if(!session){ S.auth={tela:"entrar"}; render(); return; }
   await posLogin();

@@ -83,9 +83,9 @@ async function lerTudo(tabela, colunas = "*", ordem = "id"){
 API.carregar = async function(comPassos){
   // três grupos, na ordem em que a pessoa entende: obras > unidades > histórico
   const GRUPOS = [
-    { t:"Carregando obras", s:"Obras, acessos, blocos e horários", tabs:["obras","obra_acessos","locais","horarios","perfis_publicos"] },
-    { t:"Carregando unidades", s:"Unidades, clientes e áreas comuns", tabs:["unidades","clientes","areas"] },
-    { t:"Carregando histórico", s:"Tarefas de todas as etapas", tabs:["tarefas_lista","tarefas_ac"] } ];
+    { t:"Carregando obras", s:"Obras e blocos", tabs:["obras","obra_acessos","locais","horarios","perfis_publicos"] },
+    { t:"Carregando unidades", s:"Unidades e clientes", tabs:["unidades","clientes","areas"] },
+    { t:"Carregando histórico", s:"Histórico das tarefas", tabs:["tarefas_lista","tarefas_ac"] } ];
   const falta = new Set(GRUPOS.flatMap(g => g.tabs));
   const aviso = () => { if(!comPassos) return; const k = GRUPOS.findIndex(g => g.tabs.some(t => falta.has(t)));
     if(k < 0) passo("Preparando as telas", "Quase lá"); else passo(GRUPOS[k].t, `${GRUPOS[k].s} · ${k + 1} de 3`); };

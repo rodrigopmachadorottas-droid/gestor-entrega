@@ -40,7 +40,7 @@ const IC={
   upload:sv('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.10";
+const VERSAO="v2.1.12";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -225,7 +225,7 @@ function barraFases(L){
   return `<span class="hbar" title="${segs.map(([,t,c])=>`${t}: ${c}`).join(" · ")}">${segs.filter(s=>s[2]).map(([k,,c])=>`<i class="hb-${k}" style="width:${c/n*100}%"></i>`).join("")}</span>
     <span class="hcnt">${segs.filter(s=>s[2]).map(([k,t,c])=>`<span><i class="dot hb-${k}"></i>${c} ${t.toLowerCase()}</span>`).join("")}</span>`;
 }
-function hierAberto(k,busca){ const H=S.hier||(S.hier={}); return k in H?H[k]:(busca||k.startsWith("b:")); }
+function hierAberto(k,busca){ const H=S.hier||(S.hier={}); return k in H?H[k]:!!busca; }   // começa tudo fechado (na busca abre)
 function hierUnidades(us,C,casa,busca){
   const blocos=[...new Set(us.map(nivel1Nome))];
   const tabela=L=>`<div class="tablewrap"><table class="grid hgrid"><thead><tr><th class="fz fz1 fzl">${casa?"Casa":"Und"}</th>${C.map(c=>`<th>${esc(c.h)}</th>`).join("")}</tr></thead><tbody>
@@ -243,7 +243,8 @@ function hierUnidades(us,C,casa,busca){
     }
     const nPav=casa?0:new Set(Lb.map(x=>x.nivel_2)).size, nU=Lb.filter(x=>!ehHall(x)).length;
     return `<section class="hb ${abB?"open":""}">${cab(kb,"hb-h",b,`${casa?"":`${nPav} pavimento${nPav>1?"s":""} · `}${nU} ${casa?"casa":"unidade"}${nU!==1?"s":""}`,Lb)}${abB?`<div class="hb-body">${dentro}</div>`:""}</section>`; }).join("");
-  return `<div class="hier-top"><span class="spacer"></span>
+  const nB=blocosObra().length, nT=unidadesObra().length;
+  return `<div class="hier-top"><span class="hier-obra"><b>${esc(OBRA().nome)}</b><span class="muted">${nB} ${casa?"quadra":"bloco"}${nB!==1?"s":""} · ${nT} ${casa?"casa":"unidade"}${nT!==1?"s":""}</span></span><span class="spacer"></span>
     <button class="btn sm ghost" data-act="hiertodos" data-v="1">Abrir tudo</button><button class="btn sm ghost" data-act="hiertodos" data-v="0">Fechar tudo</button></div><div class="hier-list">${html}</div>`;
 }
 function blocosDD(sel,act){
