@@ -5,7 +5,7 @@ function aplicarTema(){ document.documentElement.dataset.theme=S.dark?"dark":"li
 function aplicarPrefs(p){ p=p||{}; if(p.tema){ S.dark=p.tema==="dark"; aplicarTema(); try{localStorage.setItem("ge-tema",p.tema);}catch(_){} } }
 const TELAS_INICIAIS=[["indicadores","Indicadores"],["unidades","Unidades"],["areas","Áreas Comuns"],["agenda","Agenda"]];
 function telaInicialObra(){ const t=((S.perfil||{}).prefs||{}).tela; if(t==="areas"&&S.obraId&&!DB.areas.some(a=>a.id_obra===S.obraId)) return "indicadores"; if(t==="agenda"&&!can(ME(),"admin","obra","qualidade","rc","visualizador")) return "indicadores"; return TELAS_INICIAIS.some(x=>x[0]===t)?t:"indicadores"; }
-function bloqueadoPorLote(){ if(S.lote.q.length){ toast("Aviso","Você tem liberações não salvas","Toque em Liberar ou Cancelar antes de sair."); return true; } return false; }
+function bloqueadoPorLote(){ if(S.lote.q.length){ toast("Aviso","Você tem ações em lote não salvas","Conclua ou toque em Cancelar antes de sair."); return true; } return false; }
 function entrarObra(id){ S.obraId=id; S.screen=telaInicialObra(); S.nav=false; S.navObras=false; S.popup=null; S.busca=""; S.lote={on:false,q:[]}; S.loc={localId:null,n2:null,modal:null,cfgAberta:false}; S.hor=null; S.agd={mes:new Date(new Date().getFullYear(),new Date().getMonth(),1),dia:startOfDay(new Date()),busca:""}; resetFiltros(); }
 
 document.addEventListener("click",e=>{
@@ -86,13 +86,11 @@ document.addEventListener("click",e=>{
       executarAcao(x,"agendar","agendamento",{autor:S.user,...coletarCampos(A.def,A.f),agendamento:str}); saveDB();
       S.ag=null; toast("Sucesso","Vistoria agendada",`${x.unidade} · ${str}`);
     },
-    loteon(){ S.lote={on:true,q:[]}; S.menuAcoes=false; },
     vistaund(){ S.vistaUnd=el.dataset.v; S.menuAcoes=false; try{ localStorage.setItem("ge-vista-und",S.vistaUnd); }catch(e){} },
     hiertog(){ const k=el.dataset.k, ab=el.getAttribute("aria-expanded")==="true"; (S.hier||(S.hier={}))[k]=!ab; },
     hiertodos(){ const v=el.dataset.v==="1"; S.hier={}; unidadesObra(true).forEach(x=>{ S.hier["b:"+nivel1Nome(x)]=v; S.hier["p:"+nivel1Nome(x)+"|"+x.nivel_2]=v; }); },
     lotecancel(){ S.lote={on:false,q:[]}; },
     lotecell(){ e.stopPropagation(); const col=el.dataset.col, q=S.lote.q, i=q.findIndex(z=>z.id===id&&z.col===col); if(i>=0) q.splice(i,1); else q.push({id,col}); },
-    lotesalvar(){ let n=0; S.lote.q.forEach(({id,col})=>{const x=DB.unidades.find(u=>u.id===id); if(x&&blank(x[col])){ executarAcao(x,"liberar",col,{autor:S.user,obs:"Liberação em lote"}); n++; }}); saveDB(); S.lote={on:false,q:[]}; toast("Sucesso",`${n} teste(s) liberado(s)`); },
     agdmes(){ const m=S.agd.mes; S.agd.mes=new Date(m.getFullYear(),m.getMonth()+ +el.dataset.d,1); },
     agdhoje(){ const n=new Date(); S.agd.mes=new Date(n.getFullYear(),n.getMonth(),1); S.agd.dia=startOfDay(n); },
     agddia(){ const d=new Date(+el.dataset.t); S.agd.dia=d; if(d.getMonth()!==S.agd.mes.getMonth()) S.agd.mes=new Date(d.getFullYear(),d.getMonth(),1); },

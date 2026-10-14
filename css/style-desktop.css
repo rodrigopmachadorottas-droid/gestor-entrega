@@ -1149,3 +1149,45 @@ table.kpi td.ind-cel:hover,table.kpi td.ind-cel:focus-visible{box-shadow:inset 0
 .indl-tiles .tile sup{font-size:.68rem;font-weight:800;color:var(--primary-d);margin-left:2px}
 :root[data-theme="dark"] .indl-tiles .tile{background:rgba(255,145,20,.35)}
 .indl-tiles .tile{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:1px}
+/* ===== v2.1.19: lote, exportar, obras ===== */
+/* ações em lote */
+.lotebar .lote-sel{width:auto;flex:0 1 252px;min-width:162px;min-height:30.6px;padding-top:3.6px;padding-bottom:3.6px}
+table.grid td.lote-ok{outline:2px dashed var(--primary);outline-offset:-3.6px}
+table.grid td.lote-ok:hover{background:var(--warn-s)}
+table.grid td.lote-off{opacity:.45}
+.screen.unid:has(.lotebar){padding-bottom:99px}
+/* configurar campos: permitir lote */
+.pc-lote{display:flex;gap:10.8px;align-items:flex-start;padding:9px 10.8px;border:1px solid var(--border);border-radius:7.2px;background:var(--primary-xxl)}
+:root[data-theme="dark"] .pc-lote{background:rgba(255,145,20,.08)}
+.pc-lote:not(.off){border-color:var(--primary-xl)}
+.pc-lote.off{background:none;opacity:.75}
+/* interruptor */
+.sw{position:relative;display:inline-block;width:34.2px;height:19.8px;flex:none;cursor:pointer}
+.sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:inherit}
+.sw span{position:absolute;inset:0;border-radius:19.8px;background:var(--neutral-s);transition:background .15s}
+.sw span::after{content:"";position:absolute;top:2.7px;left:2.7px;width:14.4px;height:14.4px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s}
+.sw input:checked+span{background:var(--primary)}
+.sw input:checked+span::after{transform:translateX(14.4px)}
+.sw input:focus-visible+span{outline:2px solid var(--primary);outline-offset:2px}
+.sw input:disabled+span{opacity:.5;cursor:not-allowed}
+/* tela Obras */
+.screen.oadm{display:block}
+.oadm-wrap{width:min(810px,100%);display:flex;flex-direction:column;gap:12.6px}
+.oadm-nova{display:flex;flex-direction:column;gap:10.8px}
+.oadm-lista{display:flex;flex-direction:column;gap:0}
+.oadm-h,.oadm-row{display:grid;grid-template-columns:68.4px minmax(0,1.4fr) minmax(0,1fr) 68.4px 46.8px;gap:9px;align-items:center}
+.oadm-h{padding:0 0 5.4px;font-weight:600}
+.oadm-row{padding:7.2px 0;border-top:1px solid var(--border)}
+.oadm-row.inativa input.inp{opacity:.55}
+.oadm-ord{display:flex;gap:2px}
+.oadm-lista>.small{margin-top:9px}
+@media (max-width:860px){
+  .oadm-h{display:none}
+  .oadm-row{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"ord nome sw" "ord cid n"}
+  .oadm-row .oadm-ord{grid-area:ord;flex-direction:column}
+  .oadm-row [data-oedit=nome]{grid-area:nome}
+  .oadm-row [data-oedit=cidade]{grid-area:cid}
+  .oadm-row .tnum{grid-area:n;text-align:center}
+  .oadm-row .sw{grid-area:sw}
+  .lotebar .lote-sel{flex:1 1 100%}
+}

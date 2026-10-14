@@ -37,10 +37,11 @@ const IC={
   camera:sv('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
   info:sv('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>'),
   pdf:sv('<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
+  download:sv('<path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>'),
   upload:sv('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.18";
+const VERSAO="v2.1.19";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -148,7 +149,9 @@ function painelAdmin(){
     <h3 class="ap-sub">Funções</h3><div class="ap-funcs">
     ${MODO_DEMO?"":`<button class="btn dark ap-usr" data-act="usuarios">${IC.users}Gerenciar usuários${nU?`<span class="sb-badge">${nU}</span>`:""}</button>`}
     <button class="btn dark ap-usr" data-act="popupscfg">${IC.edit}Configurar campos das etapas</button>
-    <button class="btn dark ap-usr" data-act="frasescfg">${IC.chat||IC.edit}Definir frases</button></div>
+    <button class="btn dark ap-usr" data-act="frasescfg">${IC.chat||IC.edit}Definir frases</button>
+    <button class="btn dark ap-usr" data-act="obrasadm">${IC.building}Obras</button>
+    <button class="btn dark ap-usr" data-act="exportar">${IC.download}Exportar dados</button></div>
     <button class="iconbtn temabtn" data-act="tema" aria-label="${isDark()?"Usar tema claro":"Usar tema escuro"}">${isDark()?io("moon"):io("sun")}</button>
     <span class="spacer"></span>
     ${MODO_DEMO?`<div class="proto"><span class="eyebrow">Modo demonstração</span><span class="small muted">Dados fictícios. As alterações ficam só neste navegador.</span>
@@ -172,19 +175,18 @@ function blocosObra(){ return DB.locais.filter(l=>l.id_obra===S.obraId).map(l=>l
 function colunasUnidades(){
   const u=ME(), cfg=OBRA().config, f=S.fil, C=[];
   if(f.extras){ C.push({h:"Fase",v:x=>FASES[(ETAPA[x.sub_etapa]||{}).f]||"",plain:1}); C.push({h:"Etapa",v:x=>(ETAPA[x.sub_etapa]||{}).n||"",plain:1}); C.push({h:"Cliente",v:x=>{const c=clienteById(x.id_cliente); return c?tituloCase(c.nome):"-";},plain:1,l:1}); }
-  if(f.f1){ cfg.testes.forEach(k=>{const te=TESTES.find(t=>t.k===k); C.push({h:te.nome,col:te.col,v:x=>x[te.col],teste:1});});
-    if(can(u,"admin","obra","qualidade")) C.push({h:"Finalizando Unidade",v:x=>x.sub_etapa===3?"Pendente":x.sub_etapa>=4?"Concluído":""}); }
-  if(f.f2){ C.push({h:"Vistoria Qualidade",v:x=>x.rep_vistoria_at});
-    if(cfg.previa) C.push({h:"Vistoria Prévia",v:x=>x.rep_vistoria_previa});
-    C.push({h:"Agendamento RC",v:x=>x.agendamento}); C.push({h:"Vistoria Cliente",v:x=>x.rep_vistoria_cliente}); }
+  if(f.f1){ cfg.testes.forEach(k=>{const te=TESTES.find(t=>t.k===k); C.push({h:te.nome,col:te.col,k:te.col,v:x=>x[te.col],teste:1});});
+    if(can(u,"admin","obra","qualidade")) C.push({h:"Finalizando Unidade",k:"finalizando",v:x=>x.sub_etapa===3?"Pendente":x.sub_etapa>=4?"Concluído":""}); }
+  if(f.f2){ C.push({h:"Vistoria Qualidade",k:"rep_vistoria_at",v:x=>x.rep_vistoria_at});
+    if(cfg.previa) C.push({h:"Vistoria Prévia",k:"rep_vistoria_previa",v:x=>x.rep_vistoria_previa});
+    C.push({h:"Agendamento RC",k:"agendamento",v:x=>x.agendamento}); C.push({h:"Vistoria Cliente",k:"rep_vistoria_cliente",v:x=>x.rep_vistoria_cliente}); }
   if(f.f3){ C.push({h:"Análise Financeira",v:x=>x.sub_etapa>=8?x.financeiro_status||"Pendente":""}); C.push({h:"Entrega Chaves",v:x=>x.sub_etapa===10?"Pendente":x.sub_etapa===11?"Concluído":""}); }
   return C;
 }
 function celulaUnd(x,c){
   const v=c.v(x)||""; if(c.plain) return `<td class="${c.l?"l":""}">${esc(v)}</td>`;
-  const q=S.lote.on&&c.teste&&S.lote.q.some(z=>z.id===x.id&&z.col===c.col);
-  const clic=S.lote.on&&c.teste&&blank(v)?` data-act="lotecell" data-id="${x.id}" data-col="${c.col}" style="cursor:copy"`:"";
-  return `<td class="c-st ${q?"queued":stClass(v)}"${clic}>${q?"Liberar":esc(v)}</td>`;
+  const lc=S.lote.on?loteCelula(x,c,v):null; if(lc) return lc;
+  return `<td class="c-st ${stClass(v)}${S.lote.on?" lote-off":""}">${esc(v)}</td>`;
 }
 const nomePav=x=>nivel2Nome(x)||"Sem pavimento";
 // HALL não tem fluxo: uma célula só, cinza, no lugar das etapas
@@ -194,18 +196,18 @@ function vistaUnd(){ if(!S.vistaUnd){ try{ S.vistaUnd=localStorage.getItem("ge-v
 function telaUnidades(){
   const cfg=OBRA().config, f=S.fil, casa=cfg.tipo==="casa";
   const q=S.busca.trim().toLowerCase();
-  const us=ordenarUnidades(unidadesObra(true).filter(x=>bateBusca(x,q)&&(!f.blocos.length||f.blocos.includes(nivel1Nome(x)))));
-  const C=colunasUnidades(), podeLote=can(ME(),"obra")&&f.f1, hier=vistaUnd()==="hier";
-  const nFil=(f.extras?0:1)+(f.f1?0:1)+(f.f2?0:1)+(f.f3?0:1)+(f.blocos.length?1:0);
-  const lote=S.lote.on?`<div class="lotebar"><b>Liberação em lote</b><span class="small">Toque nas células vazias de teste para marcar. ${S.lote.q.length} selecionada(s).</span><span class="spacer"></span>
-      <button class="btn ghost sm" data-act="lotecancel">Cancelar</button><button class="btn primary sm" data-act="lotesalvar" ${S.lote.q.length?"":"disabled"}>Liberar ${S.lote.q.length||""}</button></div>`
-    :"";
+  // atalho: só as minhas pendências (o HALL some quando está ligado)
+  const atalho=x=>!f.minhas||minhaPendencia(x);
+  const us=ordenarUnidades(unidadesObra(true).filter(x=>bateBusca(x,q)&&(!f.blocos.length||f.blocos.includes(nivel1Nome(x)))&&atalho(x)));
+  const C=colunasUnidades(), podeLote=loteDisponivel(), hier=vistaUnd()==="hier";
+  const nFil=(f.extras?0:1)+(f.f1?0:1)+(f.f2?0:1)+(f.f3?0:1)+(f.blocos.length?1:0)+(f.minhas?1:0);
+  const lote=S.lote.on?loteBarHTML():"";
   const opt=(v,t)=>`<button data-act="vistaund" data-v="${v}" class="dd-opt ${vistaUnd()===v?"on":""}" role="menuitemradio" aria-checked="${vistaUnd()===v}"><span class="dd-ck">${vistaUnd()===v?IC.check:""}</span>${t}</button>`;
   const acoes=[`<div class="dd-lbl">Visualização</div>`,opt("tabela","Visão tabela"),opt("hier","Visão hierarquia"),
-    podeLote?`<hr class="dd-sep"><button data-act="loteon" class="dd-opt">Liberar testes em lote</button>`:""].filter(Boolean);
+    podeLote?`<hr class="dd-sep"><button data-act="loteon" class="dd-opt">Ações em lote</button>`:""].filter(Boolean);
   const menu=`<div class="dd-wrap"><button class="iconbtn" data-act="menuacoes" aria-label="Mais ações" aria-expanded="${!!S.menuAcoes}">${IC.dots}</button>${S.menuAcoes?`<div class="dd-scrim" data-act="menuacoes"></div><div class="dropdown" role="menu">${acoes.join("")}</div>`:""}</div>`;
   let body;
-  if(!us.length) body=`<div class="panel empty"><b>Nenhuma unidade encontrada</b><span>Mude o filtro ou a busca e tente de novo.</span></div>`;
+  if(!us.length) body=`<div class="panel empty"><b>${f.minhas&&!q?"Nenhuma pendência sua nesta obra":"Nenhuma unidade encontrada"}</b><span>${f.minhas&&!q?"Tudo em dia por aqui.":"Mude o filtro ou a busca e tente de novo."}</span></div>`;
   else if(hier) body=hierUnidades(us,C,casa,!!q);
   else {
     const fz=casa?["fz fz1","","fz fz3 fzl"]:["fz fz1","fz fz2","fz fz3 fzl"];
@@ -261,7 +263,7 @@ function drawerUnidades(){
   if(!S.drawer) return "";
   const v=fasesVisiveis(ME()), f=S.fil;
   const ck=(k,t)=>v[k]?fck("f-"+k,`data-fil="${k}"`,f[k],t):"";
-  return drawerShell(`<div class="fsec"><b class="flbl">Fases</b>${ck("extras","Informações Extras")}${ck("f1","Produção")}${ck("f2","Vistorias")}${ck("f3","Entrega")}</div><hr>${blocosDD(f.blocos,"filbloco")}`,"limparfil");
+  return drawerShell(`<div class="fsec"><b class="flbl">Atalhos</b>${fck("f-minhas",'data-fil="minhas"',f.minhas,"Só as minhas pendências")}</div><hr><div class="fsec"><b class="flbl">Fases</b>${ck("extras","Informações Extras")}${ck("f1","Produção")}${ck("f2","Vistorias")}${ck("f3","Entrega")}</div><hr>${blocosDD(f.blocos,"filbloco")}`,"limparfil");
 }
 
 /* ================= POPUP DA UNIDADE ================= */

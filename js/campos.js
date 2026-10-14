@@ -202,10 +202,17 @@ function telaPopups(){
       <p class="small muted" style="margin:8px 0">Vale para todas as obras. Escolha a ação para editar os campos do popup.</p>${lista}</aside>
     <section class="pc-main"><div class="panel pc-ed" id="pc-ed"><div class="row"><div><div class="small muted">${esc(nm.etapa)}</div><h2 class="h2" style="margin:0">${esc(nm.acao)}</h2></div><span class="spacer"></span>
         ${ehPadrao(key) ? `<span class="pill s-neutral">Padrão</span>` : `<button class="btn sm ghost" data-act="pcfgpadrao">Voltar ao padrão</button>`}</div>
-      <div class="pc-cards">${cards}</div>
+      ${loteCfgHTML(key, def)}<div class="pc-cards">${cards}</div>
       <div class="dd-wrap" style="align-self:flex-start"><button class="btn primary sm btn-ic" data-act="pcfgadd">${IC.plus}Adicionar campo</button>${addMenu}</div></div>
     <div class="panel pc-prev"><b class="small muted">Pré-visualização</b><div class="pc-box"><div class="mhead"><div class="t"><b class="conf-t">${esc(nm.acao)} · ${esc(nm.etapa)}</b><div class="small muted">${nm.area ? "Salão de Festas" : "Bloco A · AP 101"}</div></div></div>
       <div class="mbody" id="pc-prev-body">${prevHTML(def)}</div></div></div></section></main>`;
+}
+// "Permitir fazer em lote": só nas ações das unidades, e só se o popup tiver apenas Observações
+function loteCfgHTML(key, def){
+  if(key.startsWith("ac:") || key.endsWith(":agendar")) return "";
+  const r = S.pcfg.rasc[key], on = r && typeof r.lote === "boolean" ? r.lote : lotePadrao(key), ok = camposSimples(def);
+  return `<div class="pc-lote ${ok ? "" : "off"}"><label class="sw"><input type="checkbox" data-lotecfg ${on && ok ? "checked" : ""} ${ok ? "" : "disabled"}><span></span></label>
+    <div><b>Permitir fazer em lote</b><div class="small muted">${ok ? "Aparece em Unidades > ⋯ > Ações em lote, para fazer esta ação em várias unidades de uma vez (com uma observação para todas)." : "Só dá para ações que têm apenas Observações. Esta tem outros campos, então fica só uma por vez."}</div></div></div>`;
 }
 function campoEditor(c, i, n){
   const m = TIPOS_CAMPO[c.tipo] || { nome:c.tipo }, base = `data-ci="${i}"`;
@@ -242,16 +249,16 @@ Object.assign(ACOES_EXTRA, {
   pcfgnovo(el){ camposEdit(S.pcfg.sel).push(campoNovo(el.dataset.t)); S.pcfg.add = false; S.pcfg.sujo = true; },
   pcfgdel(el){ camposEdit(S.pcfg.sel).splice(+el.dataset.ci, 1); S.pcfg.sujo = true; },
   pcfgmov(el){ const L = camposEdit(S.pcfg.sel), i = +el.dataset.ci, j = i + +el.dataset.d; if(j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; S.pcfg.sujo = true; },
-  pcfgpadrao(){ delete S.pcfg.rasc[S.pcfg.sel]; S.pcfg.sujo = true; S.pcfg.prev = formVazio(); },
+  pcfgpadrao(){ const r = S.pcfg.rasc[S.pcfg.sel]; if(r && typeof r.lote === "boolean") S.pcfg.rasc[S.pcfg.sel] = { lote:r.lote }; else delete S.pcfg.rasc[S.pcfg.sel]; S.pcfg.sujo = true; S.pcfg.prev = formVazio(); },
   pcfgopadd(el){ const c = camposEdit(S.pcfg.sel)[+el.dataset.ci]; c.ckops = c.ckops || CK_PADRAO(); c.ckops.push({ id:"op" + Date.now().toString(36), rotulo:"Nova opção", tipo:"problema" }); S.pcfg.sujo = true; },
   pcfgopdel(el){ const c = camposEdit(S.pcfg.sel)[+el.dataset.ci]; if(c.ckops.length <= 2) return; c.ckops.splice(+el.dataset.j, 1); if(!c.ckops.some(o => o.tipo === "ok")) c.ckops[0].tipo = "ok"; S.pcfg.sujo = true; },
   async pcfgsalvar(){
     const R = S.pcfg.rasc, erro = Object.entries(R).map(([k, v]) => { const n = nomeAcaoCfg(k);
-      for(const c of v.campos){ if(!String(c.rotulo || "").trim()) return `${n.etapa} · ${n.acao}: um campo está sem título`;
+      for(const c of v.campos || []){ if(!String(c.rotulo || "").trim()) return `${n.etapa} · ${n.acao}: um campo está sem título`;
         if(c.tipo === "lista" && !(c.opcoes || []).length) return `${n.etapa} · ${n.acao}: a lista "${c.rotulo}" não tem opções`;
         if(c.tipo === "checklist" && !(c.itens || []).length) return `${n.etapa} · ${n.acao}: o checklist não tem itens`;
         if(c.tipo === "checklist" && !(c.ckops || []).some(o => o.tipo === "ok")) return `${n.etapa} · ${n.acao}: o checklist precisa de uma opção que conta como aprovado`; }
-      if(v.campos.filter(c => c.tipo === "lista" && c.principal).length > 1) return `${n.etapa} · ${n.acao}: só uma lista pode ser o texto principal`;
+      if((v.campos || []).filter(c => c.tipo === "lista" && c.principal).length > 1) return `${n.etapa} · ${n.acao}: só uma lista pode ser o texto principal`;
       return null; }).find(Boolean);
     if(erro){ toast("Erro", "Corrija antes de salvar", erro); return; }
     S.carregando = "Salvando..."; render();
@@ -273,6 +280,7 @@ INPUT_EXTRA.push(t => {
   if(t.dataset.hp){ const F = formAtual(); if(F){ const [h, m] = (F.v[t.dataset.cf] || "09:00").split(":"); F.v[t.dataset.cf] = t.dataset.hp === "h" ? `${t.value}:${m}` : `${h}:${t.value}`; return true; } }
   if(t.dataset.cf != null){ const F = formAtual(); if(F){ F.v[t.dataset.cf] = t.value; return true; } }
   if(t.dataset.cft != null){ const F = formAtual(); if(F){ F.snt[t.dataset.cft] = t.value; return true; } }
+  if(S.pcfg && t.hasAttribute("data-lotecfg")){ if(t.type === "checkbox"){ const k = S.pcfg.sel; S.pcfg.rasc[k] = { ...(S.pcfg.rasc[k] || {}), lote:t.checked }; S.pcfg.sujo = true; S.pcfg.sair = false; } return "render"; }
   if(S.pcfg && t.dataset.ci != null){
     const c = camposEdit(S.pcfg.sel)[+t.dataset.ci]; if(!c) return true; const f = t.dataset.cfe;
     if(f === "rotulo" || f === "textoSim" || f === "ajuda") c[f] = t.value;
