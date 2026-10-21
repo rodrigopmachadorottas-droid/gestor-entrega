@@ -36,6 +36,7 @@ O passo a passo completo para colocar no ar está no documento
 | `supabase/06_atualizacao_2.1.4.sql` | laudos de engenheiro e regra das 24 h de antecedência no agendamento — rodar 1x depois da 05 |
 | `supabase/07_atualizacao_2.1.5.sql` | função Líder de área, clientes por obra e exceções de horário — rodar 1x depois da 06 |
 | `supabase/12_atualizacao_2.1.18.sql` | função Visualizador — rodar 1x depois da 11 |
+| `supabase/13_atualizacao_2.1.23.sql` | apagar unidade/bloco/área apaga junto o histórico e os laudos; limpa os que já ficaram órfãos — rodar 1x depois da 12 |
 | `supabase/11_atualizacao_2.1.14.sql` | campos configuráveis também nas áreas comuns — rodar 1x depois da 10 |
 | `supabase/10_atualizacao_2.1.10.sql` | líder do RC grava a análise financeira — rodar 1x depois da 09 |
 | `supabase/09_atualizacao_2.1.8.sql` | apelidos por pessoa e motivo Inadimplente — rodar 1x depois da 08 |
@@ -69,4 +70,4 @@ Os arquivos `02_dados_*.sql` e os CSV têm dados pessoais de clientes: **não su
 
 ## Publicar uma nova versão
 
-Altere os arquivos, troque `?v=2.1.22` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
+Altere os arquivos, troque `?v=2.1.23` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.

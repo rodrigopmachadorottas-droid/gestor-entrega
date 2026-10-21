@@ -1042,3 +1042,25 @@ end $$;
 -- 16. v2.1.18: função Visualizador (mesmo conteúdo da 12_atualizacao)
 -- =====================================================================
 insert into public.funcoes values ('visualizador','Visualizador',3) on conflict (codigo) do update set nome = 'Visualizador';
+
+-- 17) (2.1.23) apagar unidade/área apaga o histórico e os laudos dela
+create or replace function public.apagar_dependentes_unidade() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from laudos  where id_unidade = old.id;
+  delete from tarefas where id_unidade = old.id;
+  return old;
+end $$;
+drop trigger if exists unidades_apagar_dependentes on public.unidades;
+create trigger unidades_apagar_dependentes after delete on public.unidades
+  for each row execute function public.apagar_dependentes_unidade();
+
+create or replace function public.apagar_dependentes_area() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from tarefas_ac where id_local = old.id;
+  return old;
+end $$;
+drop trigger if exists areas_apagar_dependentes on public.areas;
+create trigger areas_apagar_dependentes after delete on public.areas
+  for each row execute function public.apagar_dependentes_area();
