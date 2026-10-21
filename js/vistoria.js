@@ -24,9 +24,13 @@ const CK_CAT_PADRAO = { "Pintura (paredes e teto)":"acabamento", "Revestimentos 
 // itens sempre como [{t, cat}] (aceita o formato antigo, que era só o texto)
 const ckItens = c => (c.itens || []).map(x => typeof x === "string" ? { t:x, cat:CK_CAT_PADRAO[x] || "construtivo" } : { t:String(x.t || ""), cat:x.cat === "acabamento" ? "acabamento" : "construtivo" });
 const chaveCfg = (ctx, sec, a) => ctx === "ac" ? `ac:${sec}:${a}` : `${sec}:${a}`;
-const ehVistoria = (ctx, sec) => camposDe(chaveCfg(ctx, sec, "vistoriar")).some(c => c.tipo === "checklist");
-// a correção de uma etapa com checklist pede fotos: não dá para fazer em lote
-const exigeFotos = key => { const m = /^(ac:)?(.+):corrigir$/.exec(key); return !!m && ehVistoria(m[1] ? "ac" : "und", m[2]); };
+const ckDaEtapa = (ctx, sec) => camposDe(chaveCfg(ctx, sec, "vistoriar")).find(c => c.tipo === "checklist") || null;
+const ehVistoria = (ctx, sec) => !!ckDaEtapa(ctx, sec);
+// foto obrigatória: no item reprovado e na correção (configurável por etapa; padrão sim)
+const ckFotoRep = c => !!c && c.fotoRep !== false;
+const ckFotoCor = c => !!c && c.fotoCor !== false;
+// a correção que pede foto de cada item não dá para fazer em lote
+const exigeFotos = key => { const m = /^(ac:)?(.+):corrigir$/.exec(key); return !!m && ckFotoCor(ckDaEtapa(m[1] ? "ac" : "und", m[2])); };
 
 // nas seções do popup, Aprovar + Reprovar viram um botão só: Vistoriar
 function vistAplicar(s, ctx){
@@ -69,7 +73,7 @@ async function carregarFotos(){
 }
 function fotoThumb(f, del){
   const i = FOTOS_TELA.push(f) - 1, src = fotoSrc(f);
-  return `<span class="fth"><button type="button" class="fth-b" data-act="fotover" data-fi="${i}" aria-label="Ver foto">${src && src !== "erro" ? `<img src="${esc(src)}" alt="" loading="lazy">` : `<span class="fth-ph">${src === "erro" ? "!" : ""}</span>`}</button>${del ? `<button type="button" class="x" data-act="fotodel" data-k="${del.k}" data-j="${del.j}" aria-label="Remover foto">×</button>` : ""}</span>`;
+  return `<span class="fth"><button type="button" class="fth-b" data-act="fotover" data-fi="${i}" aria-label="Ver foto">${src && src !== "erro" ? `<img src="${esc(src)}" alt="" loading="lazy">` : `<span class="fth-ph">${src === "erro" ? "!" : ""}</span>`}</button>${del ? `<button type="button" class="x" data-act="ckfotodel" data-k="${del.k}" data-j="${del.j}" aria-label="Remover foto">×</button>` : ""}</span>`;
 }
 const fotosLista = L => L && L.length ? `<div class="fotos-th">${L.map(f => fotoThumb(f)).join("")}</div>` : "";
 // fotos de um item no formulário (chave "ck|campo|item" ou "cor|item")
@@ -78,12 +82,12 @@ function fotosForm(F, k){
   if(tp === "cor"){ const c = (F.cor = F.cor || {}); return (c[a] = c[a] || { fotos:[], com:"" }); }
   const x = (F.ckx = F.ckx || {}), y = (x[a] = x[a] || {}); return (y[b] = y[b] || { fotos:[], com:"" });
 }
-function fotosEditor(F, k, rotulo){
+function fotosEditor(F, k, rotulo, obrig = true){
   const L = fotosForm(F, k).fotos;
   return `<div class="fotos-ed">${L.length ? `<div class="fotos-th">${L.map((f, j) => fotoThumb(f, { k, j })).join("")}</div>` : ""}
     <div class="fotos-bt"><label class="btn sm ghost btn-ic">${IC.camera}Tirar foto<input type="file" accept="image/*" capture="environment" data-foto="${k}" hidden></label>
       <label class="btn sm ghost btn-ic">${IC.upload}Enviar foto<input type="file" accept="image/*" multiple data-foto="${k}" hidden></label>
-      <span class="small ${L.length ? "muted" : "t-bad"}">${L.length ? `${L.length} foto${L.length > 1 ? "s" : ""}` : `${rotulo} (obrigatória)`}</span></div></div>`;
+      <span class="small ${L.length || !obrig ? "muted" : "t-bad"}">${L.length ? `${L.length} foto${L.length > 1 ? "s" : ""}` : `${rotulo} (${obrig ? "obrigatória" : "opcional"})`}</span></div></div>`;
 }
 async function adicionarFotos(k, files){
   const F = formAtual(); if(!F) return;
@@ -107,7 +111,7 @@ function ckFormHTML(c, F, ctx){
   const linha = ([x, i]) => { const v = ck[i], cx = (F.ckx && F.ckx[c.id] && F.ckx[c.id][i]) || { com:"" };
     return `<div class="ckv-it ${v === "rep" ? "rep" : v === "ok" ? "ok" : ""}"><div class="ckv-top"><span class="ckv-t">${esc(x.t)} <span class="ckcat ${x.cat}">${CK_CAT_CURTO[x.cat]}</span></span>
       <div class="seg ck" role="group" aria-label="${esc(x.t)}"><button type="button" class="${v === "ok" ? "on ck-ok" : ""}" data-act="ckset" data-id="${c.id}" data-i="${i}" data-v="ok">Aprovado</button><button type="button" class="${v === "rep" ? "on ck-construtivo" : ""}" data-act="ckset" data-id="${c.id}" data-i="${i}" data-v="rep">Reprovado</button></div></div>
-      ${v === "rep" ? `<div class="ckv-rep">${fotosEditor(F, `ck|${c.id}|${i}`, "Foto do problema")}<input class="inp" data-ckcom="${c.id}|${i}" value="${esc(cx.com || "")}" placeholder="Comentário (opcional)" aria-label="Comentário sobre ${esc(x.t)}"></div>` : ""}</div>`; };
+      ${v === "rep" ? `<div class="ckv-rep">${fotosEditor(F, `ck|${c.id}|${i}`, "Foto do problema", ckFotoRep(c))}<input class="inp" data-ckcom="${c.id}|${i}" value="${esc(cx.com || "")}" placeholder="Comentário (opcional)" aria-label="Comentário sobre ${esc(x.t)}"></div>` : ""}</div>`; };
   return `<div class="field ckv"><div class="row"><b>${esc(c.rotulo)}${c.obrig ? ` <span class="obr">*</span>` : ""}</b><span class="spacer"></span>${c.todos && marc < ativos.length ? `<button type="button" class="btn sm" data-act="ckall" data-id="${c.id}">Marcar restantes como aprovado</button>` : ""}</div>
     ${c.ajuda ? `<span class="small muted">${esc(c.ajuda)}</span>` : ""}
     ${F.ckRevis ? `<div class="ckv-revis small">Revistoria: só ${ativos.length === 1 ? "o item que foi reprovado" : `os ${ativos.length} itens que foram reprovados`} na vistoria anterior.${herd.length ? ` Os outros ${herd.length} já estão aprovados: ${esc(herd.map(x => x.t).join(", "))}.` : ""}</div>` : ""}
@@ -125,7 +129,7 @@ function ckValidar(c, F, dec){
   const L = ckItensForm(c, F), ck = ckDe(F, c), at = L.map((x, i) => [x, i]).filter(([x]) => !x.h);
   if(at.some(([, i]) => !ck[i])) return "Marque todos os itens do checklist (Aprovado ou Reprovado)";
   const rep = at.filter(([, i]) => ck[i] === "rep");
-  for(const [x, i] of rep) if(!fotosForm(F, `ck|${c.id}|${i}`).fotos.length) return `Falta a foto do problema: ${x.t}`;
+  if(ckFotoRep(c)) for(const [x, i] of rep) if(!fotosForm(F, `ck|${c.id}|${i}`).fotos.length) return `Falta a foto do problema: ${x.t}`;
   if(dec === "aprovar" && rep.some(([x]) => x.cat === "construtivo")) return "Tem item construtivo/habitabilidade reprovado: a etapa precisa ser reprovada";
   if(dec === "reprovar" && !rep.length) return "Para reprovar, marque pelo menos um item como Reprovado";
   return null;
@@ -141,14 +145,14 @@ function ckColetar(c, F){
 function ckCorrHTML(c, F){
   const b = c.base, rep = b.checklist.map((x, i) => [x, i]).filter(([x]) => ckProb(x));
   return `<div class="field ckv"><b>Itens reprovados na ${b.repeticao ? b.repeticao + "ª " : ""}vistoria <span class="obr">*</span></b>
-    <span class="small muted">Reprovada em ${fmtDT(new Date(b.data))} por ${esc(nomeUsuario(b.autor))}. Para cada item, envie a foto de como ficou depois de corrigido.</span>
+    <span class="small muted">Reprovada em ${fmtDT(new Date(b.data))} por ${esc(nomeUsuario(b.autor))}. ${c.fotoCor ? "Para cada item, envie a foto de como ficou depois de corrigido." : "Se quiser, envie a foto de como ficou depois de corrigido."}</span>
     <div class="ckv-list">${rep.map(([x, i]) => { const cr = fotosForm(F, `cor|${i}`);
       return `<div class="ckv-it rep"><div class="ckv-top"><span class="ckv-t">${esc(x.item)} <span class="ckcat ${x.cat || "construtivo"}">${CK_CAT_CURTO[x.cat] || esc(x.rl || "Problema")}</span></span></div>
         <div class="ckv-ev"><span class="small muted">Problema${x.com ? `: <i>${esc(x.com)}</i>` : ""}</span>${fotosLista(x.fotos) || `<span class="small muted">Sem foto (vistoria antiga)</span>`}</div>
-        <div class="ckv-rep"><b class="small">Correção</b>${fotosEditor(F, `cor|${i}`, "Foto da correção")}<input class="inp" data-corcom="${i}" value="${esc(cr.com || "")}" placeholder="Comentário sobre a correção (opcional)" aria-label="Comentário da correção de ${esc(x.item)}"></div></div>`; }).join("")}</div></div>`;
+        <div class="ckv-rep"><b class="small">Correção</b>${fotosEditor(F, `cor|${i}`, "Foto da correção", c.fotoCor)}<input class="inp" data-corcom="${i}" value="${esc(cr.com || "")}" placeholder="Comentário sobre a correção (opcional)" aria-label="Comentário da correção de ${esc(x.item)}"></div></div>`; }).join("")}</div></div>`;
 }
 function ckCorrValidar(c, F){
-  for(const [x, i] of c.base.checklist.map((x, i) => [x, i]).filter(([x]) => ckProb(x))) if(!fotosForm(F, `cor|${i}`).fotos.length) return `Falta a foto da correção: ${x.item}`;
+  if(c.fotoCor) for(const [x, i] of c.base.checklist.map((x, i) => [x, i]).filter(([x]) => ckProb(x))) if(!fotosForm(F, `cor|${i}`).fotos.length) return `Falta a foto da correção: ${x.item}`;
   return null;
 }
 function ckCorrColetar(c, F){
@@ -216,7 +220,7 @@ Object.assign(ACOES_EXTRA, {
   ckverfechar(){ S.ckVer = null; },
   fotover(el){ const f = FOTOS_TELA[+el.dataset.fi]; if(f) S.fotoVer = f; },
   fotofechar(el, id, e){ if(e && e.target.tagName === "IMG") return; S.fotoVer = null; },
-  fotodel(el){ const F = formAtual(); if(!F) return; const L = fotosForm(F, el.dataset.k).fotos, f = L[+el.dataset.j]; if(f && f.url && /^blob:/.test(f.url)) URL.revokeObjectURL(f.url); L.splice(+el.dataset.j, 1); }
+  ckfotodel(el){ const F = formAtual(); if(!F) return; const L = fotosForm(F, el.dataset.k).fotos, f = L[+el.dataset.j]; if(f && f.url && /^blob:/.test(f.url)) URL.revokeObjectURL(f.url); L.splice(+el.dataset.j, 1); }
 });
 INPUT_EXTRA.push((t, ev) => {
   if(t.dataset.foto){ if(ev === "change" && t.files && t.files.length){ const fs = [...t.files]; t.value = ""; adicionarFotos(t.dataset.foto, fs); } return true; }

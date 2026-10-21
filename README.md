@@ -69,4 +69,4 @@ Os arquivos `02_dados_*.sql` e os CSV têm dados pessoais de clientes: **não su
 
 ## Publicar uma nova versão
 
-Altere os arquivos, troque `?v=2.1.20` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
+Altere os arquivos, troque `?v=2.1.22` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.

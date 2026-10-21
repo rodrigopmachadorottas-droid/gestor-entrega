@@ -60,7 +60,7 @@ function campoNovo(tipo){
   if(tipo === "simnao") Object.assign(c, { rotulo:"Pergunta?", textoSim:"", laudo:false });
   if(tipo === "anexo") c.rotulo = "Anexos";
   if(tipo === "assinatura") Object.assign(c, { rotulo:"Assinatura do cliente", obrig:true });
-  if(tipo === "checklist") Object.assign(c, { id:"checklist", rotulo:"Checklist da vistoria", obrig:true, itens:[{ t:"Item 1", cat:"construtivo" }], todos:true, ajuda:"" });
+  if(tipo === "checklist") Object.assign(c, { id:"checklist", rotulo:"Checklist da vistoria", obrig:true, itens:[{ t:"Item 1", cat:"construtivo" }], todos:true, ajuda:"", fotoRep:true, fotoCor:true });
   return c;
 }
 // padrão de fábrica de cada ação (o que o app fazia antes da configuração)
@@ -76,7 +76,7 @@ function camposPadrao(key){
   const ck = () => ({ id:"checklist", tipo:"checklist", rotulo:"Checklist da vistoria", obrig:true, itens:CHECKLIST_QUALIDADE.map(t => ({ t, cat:CK_CAT_PADRAO[t] || "construtivo" })), todos:true,
     ajuda:"Construtivo/habitabilidade reprovado obriga a reprovar a etapa. Só acabamento reprovado: dá para aprovar mesmo assim." });
   if(a === "vistoriar" && sec === "rep_vistoria_at") return [ck()];
-  if(a === "vistoriar" && sec === "rep_vistoria_cliente") return [ck(),
+  if(a === "vistoriar" && sec === "rep_vistoria_cliente") return [{ ...ck(), fotoRep:false, fotoCor:false },
     { id:"assinatura", tipo:"assinatura", rotulo:"Assinatura do cliente", obrig:true },
     { id:"eng", tipo:"simnao", rotulo:"O cliente veio com engenheiro ou responsável técnico?", obrig:false, textoSim:"Nome do engenheiro (opcional)", laudo:true }];
   if(a === "vistoriar") return [];   // sem checklist = etapa normal (Aprovar/Reprovar)
@@ -240,7 +240,7 @@ function loteCfgHTML(key, def){
   return `<div class="pc-lote ${ok ? "" : "off"}"><label class="sw"><input type="checkbox" data-lotecfg ${on && ok ? "checked" : ""} ${ok ? "" : "disabled"}><span></span></label>
     <div><b>Permitir fazer em lote</b><div class="small muted">${ok ? "Aparece em Unidades > ⋯ > Ações em lote, para fazer esta ação em várias unidades de uma vez (com uma observação para todas)." : "Só dá para ações que têm apenas Observações. Esta tem outros campos, então fica só uma por vez."}</div></div></div>`;
 }
-const exigeFotosCfg = key => { const m = /^(.+):corrigir$/.exec(key); return !!m && camposVigentes(m[1] + ":vistoriar").some(c => c.tipo === "checklist"); };
+const exigeFotosCfg = key => { const m = /^(.+):corrigir$/.exec(key); return !!m && ckFotoCor(camposVigentes(m[1] + ":vistoriar").find(c => c.tipo === "checklist")); };
 function campoEditor(c, i, n){
   const m = TIPOS_CAMPO[c.tipo] || { nome:c.tipo }, base = `data-ci="${i}"`;
   let extra = "";
@@ -256,6 +256,9 @@ function campoEditor(c, i, n){
       <button class="iconbtn" data-act="pcfgitdel" ${base} data-j="${j}" aria-label="Remover item" ${L.length <= 1 ? "disabled" : ""}>${IC.trash || IC.close}</button></span></div>`).join("")}
       <button class="btn sm ghost btn-ic" data-act="pcfgitadd" ${base} style="align-self:flex-start">${IC.plus}Novo item</button></div>
       <span class="small muted">Construtivo/habitabilidade reprovado impede aprovar a etapa. Se só itens de acabamento forem reprovados, dá para aprovar mesmo assim (fica registrado).</span></div>
+    <label class="chk"><input type="checkbox" ${base} data-cfe="fotoRep" ${c.fotoRep !== false ? "checked" : ""}>Foto obrigatória em cada item reprovado</label>
+    <label class="chk"><input type="checkbox" ${base} data-cfe="fotoCor" ${c.fotoCor !== false ? "checked" : ""}>Foto obrigatória na correção de cada item (Pendências corrigidas)</label>
+    <span class="small muted">Desmarcado, o botão de foto continua aparecendo, mas é opcional.</span>
     <div class="field"><label>Texto de ajuda (opcional)</label><input class="inp" ${base} data-cfe="ajuda" value="${esc(c.ajuda || "")}"></div>
     <label class="chk"><input type="checkbox" ${base} data-cfe="todos" ${c.todos ? "checked" : ""}>Mostrar o botão "Marcar restantes como aprovado"</label>`; }
   return `<div class="pc-card"><div class="pc-ch"><span class="pc-tipo">${esc(m.nome)}</span><span class="spacer"></span>
@@ -318,7 +321,7 @@ INPUT_EXTRA.push(t => {
     const c = camposEdit(S.pcfg.sel)[+t.dataset.ci]; if(!c) return true; const f = t.dataset.cfe;
     if(f === "rotulo" || f === "textoSim" || f === "ajuda") c[f] = t.value;
     else if(f === "opcoes" || f === "itens") c[f] = t.value.split("\n").map(s => s.trim()).filter(Boolean);
-    else if(f === "obrig" || f === "principal" || f === "laudo" || f === "todos"){ c[f] = t.checked; if(f === "principal" && t.checked) camposEdit(S.pcfg.sel).forEach(x => { if(x !== c && x.tipo === "lista") x.principal = false; }); }
+    else if(f === "obrig" || f === "principal" || f === "laudo" || f === "todos" || f === "fotoRep" || f === "fotoCor"){ c[f] = t.checked; if(f === "principal" && t.checked) camposEdit(S.pcfg.sel).forEach(x => { if(x !== c && x.tipo === "lista") x.principal = false; }); }
     else if(t.dataset.cki != null){ c.itens = ckItens(c); c.itens[+t.dataset.cki].t = t.value; }
     else if(t.dataset.ckcat != null){ c.itens = ckItens(c); c.itens[+t.dataset.ckcat].cat = t.value; }
     S.pcfg.sujo = true; S.pcfg.sair = false;

@@ -23,7 +23,7 @@ function abrirConf(ctx,a,k){
   // vistoria com checklist: na revistoria, só os itens reprovados antes
   if(a==="vistoriar"){ const c=def.find(x=>x.tipo==="checklist"); if(c){ const r=itensVistoria(c,ctx,item,s.col); f.ckIt={[c.id]:r.itens}; f.ckRevis=r.revis; } }
   // correção de etapa com checklist: mostra os itens reprovados e pede a foto de cada correção
-  if(a==="corrigir"&&ehVistoria(ctx,s.key)){ const base=ultimaReprova(ctx,item,s.col); if(base) def=[{id:"ckcorr",tipo:"ckcorr",rotulo:"Itens reprovados",obrig:true,base},...def]; }
+  if(a==="corrigir"&&ehVistoria(ctx,s.key)){ const base=ultimaReprova(ctx,item,s.col); if(base) def=[{id:"ckcorr",tipo:"ckcorr",rotulo:"Itens reprovados",obrig:true,base,fotoCor:ckFotoCor(ckDaEtapa(ctx,s.key))},...def]; }
   S.conf={ctx,a,col:s.col,k,label:ac.l,kind:ac.k,titulo:tituloAcao(a,s,ctx),
     sub:isU?`${nivel1Nome(item)} · ${item.unidade}`:item.descricao,
     cliente:isU&&item.id_cliente?tituloCase((clienteById(item.id_cliente)||{}).nome||""):"",

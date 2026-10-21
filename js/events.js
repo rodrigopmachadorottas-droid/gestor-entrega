@@ -167,7 +167,9 @@ document.addEventListener("click",e=>{
     pdfcfg(){ abrirPdfCfg(); },
     pdfcfgfechar(){ S.pdfCfg=null; },
     pdfetapas(){ const ops=indEtapas(); S.pdfCfg.etapas=S.pdfCfg.etapas.length===ops.length?[]:ops.map(o=>o.id); },
-    pdfgerar(){ gerarPdf(); },
+    async pdfgerar(){ const C=S.pdfCfg, cef=C.visoes.cef&&(C.cefBlocos||[]).slice(), outras=["unid","geral","aprov","usuarios"].some(k=>C.visoes[k]);
+      if(cef&&!cef.length){ toast("Aviso","Escolha pelo menos um bloco para o relatório da Vistoria Qualidade"); return; }
+      if(outras) await gerarPdf(); else S.pdfCfg=null; if(cef) await gerarPdfCef(cef); },
     impabrir(){ abrirImportar(); },
     impfechar(){ S.imp=null; },
     impaba(){ S.imp.aba=el.dataset.v; },
@@ -222,6 +224,7 @@ document.addEventListener("change",e=>{
   if(t.dataset.cfgnum){ OBRA().config[t.dataset.cfgnum]=Math.max(1,Math.min(40,parseInt(t.value)||8)); saveDB(); render(); return; }
   if((t.dataset.locf==="gerar"||t.dataset.locf==="hall")&&S.loc.modal&&S.loc.modal.f){ S.loc.modal.f[t.dataset.locf]=t.checked; render(); return; }
   if(t.dataset.pdfv&&S.pdfCfg){ S.pdfCfg.visoes[t.dataset.pdfv]=t.checked; render(); return; }
+  if(t.dataset.pdfcb&&S.pdfCfg){ const L=S.pdfCfg.cefBlocos||[], b=t.dataset.pdfcb; S.pdfCfg.cefBlocos=t.checked?[...L,b]:L.filter(x=>x!==b); return; }
   if(t.dataset.pdfrep&&S.pdfCfg){ S.pdfCfg.rep=t.checked; return; }
   if(t.dataset.pdfe&&S.pdfCfg){ const L=S.pdfCfg.etapas, k=t.dataset.pdfe; S.pdfCfg.etapas=t.checked?[...L,k]:L.filter(x=>x!==k); render(); return; }
   if(t.id==="imp-arq"&&S.imp&&t.files[0]){ lerPlanilha(t.files[0]); t.value=""; return; }
