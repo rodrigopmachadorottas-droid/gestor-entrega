@@ -22,6 +22,7 @@ O passo a passo completo para colocar no ar está no documento
 | `js/financeiro.js` | tela Análise Financeira e importação da planilha |
 | `js/frases.js` | tela Definir frases (admin) |
 | `js/gestao.js` | minhas pendências, ações em lote, exportar/backup e tela Obras (admin) |
+| `js/vistoria.js` | vistoria com checklist (Vistoriar, fotos dos itens, correção com foto e Ver checklist) |
 | `js/apelidos.js` | apelidos e frase da tela inicial |
 | `js/indleg.js` | legendas, cores e explicações da Visão Unidades |
 | `js/demo.js` | gerador de dados fictícios do modo demonstração |
@@ -68,4 +69,4 @@ Os arquivos `02_dados_*.sql` e os CSV têm dados pessoais de clientes: **não su
 
 ## Publicar uma nova versão
 
-Altere os arquivos, troque `?v=2.1.19` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
+Altere os arquivos, troque `?v=2.1.20` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
