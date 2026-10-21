@@ -41,7 +41,7 @@ const IC={
   upload:sv('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.19";
+const VERSAO="v2.1.20";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -280,7 +280,7 @@ function popupUnidade(){
 }
 function secaoHTML(s,ctx){
   const k=s.key, temRep=s.acts.some(a=>a.a==="reprovar");
-  const moves=s.moves.length?`<ul class="moves">${s.moves.map(m=>{const [c,i]=MOV_IC[m.tipo]||MOV_IC.neutral; return `<li><span class="ic" style="background:${c}">${i}</span><div><b class="tnum">${fmtDT(m.data)}</b> - ${esc(nomeUsuario(m.autor))} ${esc(m.txt)}</div>${m.obs?`<div class="obs">${esc(m.obs)}</div>`:""}${camposResumo(m.campos)}${m.checklist?ckResumo(m.checklist):""}${m.anexos&&m.anexos.length?`<div class="obs anx">${IC.clip}${m.anexos.map(a=>a.path?`<button class="linkbtn" data-act="anexo" data-path="${esc(a.path)}">${esc(a.nome)}</button>`:esc(a.nome)).join(", ")}</div>`:""}${m.assinatura?`<div class="obs"><img class="sigimg" src="${m.assinatura}" alt="Assinatura do cliente"></div>`:m.temAss?`<div class="obs"><button class="linkbtn" data-act="verass" data-id="${m.tid}">Ver assinatura do cliente</button></div>`:""}</li>`;}).join("")}</ul>`:"";
+  const moves=s.moves.length?`<ul class="moves">${s.moves.map(m=>{const [c,i]=MOV_IC[m.tipo]||MOV_IC.neutral; return `<li><span class="ic" style="background:${c}">${i}</span><div><b class="tnum">${fmtDT(m.data)}</b> - ${esc(nomeUsuario(m.autor))} ${esc(m.txt)}</div>${m.obs?`<div class="obs">${esc(m.obs)}</div>`:""}${camposResumo(m.campos)}${m.checklist?ckResumo(m.checklist,m.tid,ctx):""}${m.anexos&&m.anexos.length?`<div class="obs anx">${IC.clip}${m.anexos.map(a=>a.path?`<button class="linkbtn" data-act="anexo" data-path="${esc(a.path)}">${esc(a.nome)}</button>`:esc(a.nome)).join(", ")}</div>`:""}${m.assinatura?`<div class="obs"><img class="sigimg" src="${m.assinatura}" alt="Assinatura do cliente"></div>`:m.temAss?`<div class="obs"><button class="linkbtn" data-act="verass" data-id="${m.tid}">Ver assinatura do cliente</button></div>`:""}</li>`;}).join("")}</ul>`:"";
   let acts="";
   if(s.acts.length) acts=`<div class="acts">${s.acts.map(a=>`<button class="btn ${a.k} btn-ic" data-act="abrirconf" data-ctx="${ctx}" data-a="${a.a}" data-k="${k}">${ACAO_IC[a.a]||""}${esc(a.l)}</button>`).join("")}</div>`;
   return `<section class="stagebox"><div class="sh"><b>${esc(s.titulo)}</b>${pill(s.status)}</div>${moves}${s.aviso?`<div class="small muted" style="padding:0 12.6px 9px">${esc(s.aviso)}</div>`:""}${acts}</section>`;

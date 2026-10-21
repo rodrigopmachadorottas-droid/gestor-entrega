@@ -1,9 +1,10 @@
 /* ================= CONFIRMAÇÃO DE AÇÃO ================= */
-const ACAO_IC={aprovar:IC.check,aprovarDireto:IC.check,liberar:IC.arrow,finalizar:IC.arrow,corrigir:IC.arrow,cancelar:IC.undo,agendar:IC.calendar};
+const ACAO_IC={vistoriar:IC.edit,aprovar:IC.check,aprovarDireto:IC.check,liberar:IC.arrow,finalizar:IC.arrow,corrigir:IC.arrow,cancelar:IC.undo,agendar:IC.calendar};
 function tituloAcao(a,s,ctx){
   const t=s.titulo;
   if(a==="liberar") return ctx==="ac"?"Liberar local para vistoria Qualidade":`Liberar ${t}`;
   if(a==="cancelar") return s.key==="finalizando"?"Cancelar finalização":s.col==="agendamento"?"Cancelar agendamento":"Cancelar liberação";
+  if(a==="vistoriar") return `Vistoriar · ${t}`;
   if(a==="aprovar") return `Aprovar ${t}`;
   if(a==="reprovar") return `Reprovar ${t}`;
   if(a==="corrigir") return `Pendências corrigidas · ${t}`;
@@ -18,19 +19,34 @@ function abrirConf(ctx,a,k){
   const s=secs.find(x=>x.key===k); if(!s) return; const ac=s.acts.find(x=>x.a===a); if(!ac) return;
   if(isU&&a==="agendar"){ if(!item.id_cliente){ toast("Aviso","Essa unidade ainda não possui cliente cadastrado","Vincule o cliente em Clientes."); return; }
     S.ag=novoAg(item); return; }
-  const def=isU?camposDe(`${s.key}:${a}`):camposDe(`ac:${s.key}:${a}`);
+  let def=camposDe(chaveCfg(ctx,s.key,a)); const f=formVazio();
+  // vistoria com checklist: na revistoria, só os itens reprovados antes
+  if(a==="vistoriar"){ const c=def.find(x=>x.tipo==="checklist"); if(c){ const r=itensVistoria(c,ctx,item,s.col); f.ckIt={[c.id]:r.itens}; f.ckRevis=r.revis; } }
+  // correção de etapa com checklist: mostra os itens reprovados e pede a foto de cada correção
+  if(a==="corrigir"&&ehVistoria(ctx,s.key)){ const base=ultimaReprova(ctx,item,s.col); if(base) def=[{id:"ckcorr",tipo:"ckcorr",rotulo:"Itens reprovados",obrig:true,base},...def]; }
   S.conf={ctx,a,col:s.col,k,label:ac.l,kind:ac.k,titulo:tituloAcao(a,s,ctx),
     sub:isU?`${nivel1Nome(item)} · ${item.unidade}`:item.descricao,
     cliente:isU&&item.id_cliente?tituloCase((clienteById(item.id_cliente)||{}).nome||""):"",
-    def, f:formVazio()};
+    def, f};
+  if(!def.length) confirmarAcao();   // ação sem campos: faz direto, sem popup
 }
 function confirmDialog(){
-  const C=S.conf, grande=C.def.some(c=>c.tipo==="checklist"||c.tipo==="assinatura");
+  const C=S.conf, grande=C.def.some(c=>c.tipo==="checklist"||c.tipo==="ckcorr"||c.tipo==="assinatura");
   const body=camposHTML(C.def,C.f,C.ctx)||`<span class="muted">Confirma esta ação?</span>`;
   return `<div class="modal conf" role="dialog" aria-modal="true" aria-label="${esc(C.titulo)}"><div class="scrim" data-act="conffechar"></div><div class="box ${grande?"tall":"sm2"}">
     <div class="mhead"><div class="t"><b class="conf-t">${esc(C.titulo)}</b><div class="small muted">${esc(C.sub)}</div></div><button class="iconbtn" data-act="conffechar" aria-label="Fechar">${IC.close}</button></div>
     <div class="mbody" id="mb-conf" data-keep-scroll>${body}</div>
-    <div class="mfoot"><button class="btn ${C.kind} btn-ic conf-ok" data-act="confok">${ACAO_IC[C.a]||""}${esc(C.label)}</button></div></div></div>`;
+    ${C.a==="vistoriar"?vistRodape(C):`<div class="mfoot"><button class="btn ${C.kind} btn-ic conf-ok" data-act="confok">${ACAO_IC[C.a]||""}${esc(C.label)}</button></div>`}</div></div>`;
+}
+// Vistoriar: a decisão fica no fim, depois de marcar os itens
+function vistRodape(C){
+  const e=ckEstado(C.def,C.f)||{total:0,marc:0,rep:0,constr:false};
+  const msg=e.constr?"Tem item construtivo/habitabilidade reprovado: a etapa precisa ser reprovada."
+    :e.rep?"Só itens de acabamento reprovados: dá para aprovar (fica registrado) ou reprovar."
+    :e.marc<e.total?`Faltam ${e.total-e.marc} ite${e.total-e.marc>1?"ns":"m"} para marcar.`:"Todos os itens aprovados.";
+  return `<div class="mfoot vist-foot"><span class="small ${e.constr?"t-bad":"muted"}">${msg}</span><span class="spacer"></span>
+    <button class="btn bad btn-ic" data-act="confok" data-dec="reprovar" ${e.rep?"":"disabled"}>${IC.x||IC.close}Reprovar</button>
+    <button class="btn ok btn-ic" data-act="confok" data-dec="aprovar" ${e.constr?"disabled":""}>${IC.check}Aprovar</button></div>`;
 }
 function initSig(){
   const cv=document.getElementById("sig"); if(!cv||!formAtual()) return;
@@ -47,18 +63,21 @@ function initSig(){
     const o=document.createElement("canvas"); o.width=w; o.height=h; o.getContext("2d").drawImage(cv,0,0,w,h); F.sig=o.toDataURL("image/png"); };
 }
 const CK_NOMES={ok:"Aprovado",construtivo:"Construtivo",acabamento:"Acabamento"};
-function ckResumo(ck){
+function ckResumo(ck,tid,ctx){
+  if(ck.some(x=>x.cat||x.r==="rep"||x.r==="cor")) return ckResumoNovo(ck,tid,ctx);
   const prob=ck.filter(x=>x.p!=null?x.p:x.r!=="ok"), grupos=[...new Set(prob.map(x=>x.rl||CK_NOMES[x.r]||x.r))];
   return `<div class="obs">Checklist: ${ck.length} itens${grupos.map((g,i)=>{const n=prob.filter(x=>(x.rl||CK_NOMES[x.r]||x.r)===g).length; return ` · ${i?"":`<b style="color:var(--bad-t)">`}${n} ${esc(g.toLowerCase())}${i?"":"</b>"}`;}).join("")}${prob.length?` (${esc(prob.map(x=>x.item).join(", "))})`:" · todos aprovados"}</div>`;
 }
-function confirmarAcao(){
-  const C=S.conf, erro=validarCampos(C.def,C.f,C.a);
+function confirmarAcao(dec){
+  const C=S.conf, acao=C.a==="vistoriar"?dec:C.a; if(!acao) return;
+  const erro=validarCampos(C.def,C.f,acao);
   if(erro){ toast("Erro",erro); return; }
   const o={autor:S.user,...coletarCampos(C.def,C.f)};
   if(o.agendamento==null) o.agendamento="";
-  if(C.ctx==="und"){ const x=DB.unidades.find(u=>u.id===S.popup.id), antes=x.sub_etapa; executarAcao(x,C.a,C.col,o);
-    toast("Sucesso",`${C.label}: ${x.unidade}`, x.sub_etapa!==antes?`Unidade passou para ${ETAPA[x.sub_etapa].n}`:""); }
-  else { const a=DB.areas.find(z=>z.id===S.popup.id); executarAcaoAC(a,C.a,C.col,o); toast("Sucesso",`${C.label}: ${a.descricao}`); }
+  const rot=C.a==="vistoriar"?(acao==="aprovar"?"Vistoria aprovada":"Vistoria reprovada"):C.label;
+  if(C.ctx==="und"){ const x=DB.unidades.find(u=>u.id===S.popup.id), antes=x.sub_etapa; executarAcao(x,acao,C.col,o);
+    toast("Sucesso",`${rot}: ${x.unidade}`, x.sub_etapa!==antes?`Unidade passou para ${ETAPA[x.sub_etapa].n}`:""); }
+  else { const a=DB.areas.find(z=>z.id===S.popup.id); executarAcaoAC(a,acao,C.col,o); toast("Sucesso",`${rot}: ${a.descricao}`); }
   saveDB(); S.conf=null;
 }
 

@@ -177,7 +177,7 @@ function secoesUnidade(u,user,fases){
     const mv=T.filter(t=>t.coluna==="rep_vistoria_cliente"||(t.coluna==="agendamento"&&t.acao==="agendar")).map(t=>t.coluna==="agendamento"?mov(t,"info",`agendou a ${t.repeticao}ª vistoria com o cliente para ${t.agendamento}.`):movVist(t));
     S.push({key:"rep_vistoria_cliente",col:"rep_vistoria_cliente",titulo:"Vistoria do Cliente",status:v,moves:mv,acts,aviso:[has(v,"Pendente")&&!agendado?"Aguardando agendamento pelo RC.":"",...(DB.laudos||[]).filter(L=>L.id_unidade===u.id).map(L=>L.status==="pendente"?`Laudo do engenheiro (${L.engenheiro||"responsável do cliente"}) pendente de envio desde ${fmtData(new Date(L.criado_em))}.`:`Laudo do engenheiro recebido em ${fmtData(new Date(L.recebido_em))}.`)].filter(Boolean).join(" ")});
   }
-  return S;
+  return S.map(s=>vistAplicar(s,"und"));
 }
 function mov(t,tipo,txt){ return {data:new Date(t.data),autor:t.autor,tipo,txt,obs:t.obs,anexos:t.anexos,checklist:t.checklist,campos:t.campos,assinatura:t.assinatura,temAss:t.tem_assinatura,tid:t.id}; }
 function movTeste(t){
@@ -210,7 +210,7 @@ function secoesArea(a,user){
     S.push({key:"agendamento",col:"agendamento",titulo:"Agendamento com Síndico",status:a.agendamento,acts,
       moves:T.filter(t=>t.coluna==="agendamento"||(t.coluna==="rep_vistoria_arq"&&t.acao==="aprovar")).map(t=>t.coluna==="rep_vistoria_arq"?mov(t,"info","liberou o local para agendamento com o síndico."):t.acao==="agendar"?mov(t,"ok",`agendou a vistoria do síndico para ${t.agendamento}.`):mov(t,"neutral","cancelou o agendamento."))}); }
   vist("rep_vistoria_sindico","Vistoria do Síndico","qualidade");
-  return S;
+  return S.map(s=>vistAplicar(s,"ac"));
 }
 
 /* status → classe de cor */

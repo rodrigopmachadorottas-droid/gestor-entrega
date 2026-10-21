@@ -15,7 +15,7 @@ const minhaPendencia = x => !ehHall(x) && secoesUnidade(x, ME(), TODAS_FASES).so
 /* ---------- 2) AÇÕES EM LOTE ---------- */
 const camposSimples = def => def.every(c => c.tipo === "obs");
 const lotePadrao = key => /^rep_teste_[a-z]+:liberar$/.test(key);
-function loteHabilitado(key){ const c = cfgPopups()[key]; const on = c && typeof c.lote === "boolean" ? c.lote : lotePadrao(key); return on && camposSimples(camposDe(key)); }
+function loteHabilitado(key){ if(exigeFotos(key)) return false; const c = cfgPopups()[key]; const on = c && typeof c.lote === "boolean" ? c.lote : lotePadrao(key); return on && camposSimples(camposDe(key)); }
 const NOMES_LOTE = { liberar:"Liberar", aprovar:"Aprovar", reprovar:"Reprovar", corrigir:"Pendências corrigidas", finalizar:"Finalizar", aprovarDireto:"Aprovar direto", cancelar:"Cancelar" };
 // células onde cada ação em lote pode ser feita agora: {acao: Map("id|chave" → {id, k, col})}
 function loteElegiveis(){

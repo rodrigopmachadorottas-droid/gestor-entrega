@@ -53,7 +53,7 @@ document.addEventListener("click",e=>{
     fecharpop(){ S.popup=null; S.ag=null; S.conf=null; },
     abrirconf(){ abrirConf(el.dataset.ctx,el.dataset.a,el.dataset.k); },
     conffechar(){ S.conf=null; },
-    confok(){ confirmarAcao(); },
+    confok(){ confirmarAcao(el.dataset.dec); },
     homeind(){ S.homeInd=S.homeInd?null:{etapa:"rep_teste_esgoto"}; },
     acaound(){
       const x=DB.unidades.find(u=>u.id===S.popup.id), a=el.dataset.a, col=el.dataset.col, k=el.dataset.k;
@@ -248,6 +248,6 @@ document.addEventListener("submit",e=>{
   saveDB(); S.cli.edit=null; toast("Sucesso","Cliente salvo"); render();
 });
 document.addEventListener("keydown",e=>{ if(e.key!=="Escape") return;
-  if(S.imp) S.imp=null; else if(S.pdfCfg) S.pdfCfg=null; else if(S.laudoRec) S.laudoRec=null; else if(S.agdInfo) S.agdInfo=false; else if(S.conf) S.conf=null; else if(S.homeInd) S.homeInd=null; else if(S.menuAcoes) S.menuAcoes=false; else if(S.adminPanel) S.adminPanel=false; else if(S.navObras) S.navObras=false; else if(S.ag) S.ag=null; else if(S.popup) S.popup=null; else if(S.indLista) S.indLista=null; else if(S.loc.modal) S.loc.modal=null; else if(S.popup) S.popup=null; else if(S.drawer) S.drawer=false; else if(S.nav) S.nav=false; else return; render(); });
+  if(S.imp) S.imp=null; else if(S.exp) S.exp=null; else if(S.lote&&S.lote.conf) S.lote.conf=null; else if(S.pdfCfg) S.pdfCfg=null; else if(S.laudoRec) S.laudoRec=null; else if(S.agdInfo) S.agdInfo=false; else if(S.conf) S.conf=null; else if(S.homeInd) S.homeInd=null; else if(S.menuAcoes) S.menuAcoes=false; else if(S.adminPanel) S.adminPanel=false; else if(S.navObras) S.navObras=false; else if(S.ag) S.ag=null; else if(S.popup) S.popup=null; else if(S.indLista) S.indLista=null; else if(S.loc.modal) S.loc.modal=null; else if(S.popup) S.popup=null; else if(S.drawer) S.drawer=false; else if(S.nav) S.nav=false; else return; render(); });
 
 /* O início do app fica em main.js */

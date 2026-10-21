@@ -231,6 +231,7 @@ API._commit = async function(){
 API.enviarAcao = async function(a){
   const t = a.tarefa, reg = a.reg;
   let anexos = null;
+  await enviarFotosChecklist(reg, t.checklist);   // fotos dos itens reprovados / corrigidos
   if(t.anexos && t.anexos.length){
     anexos = [];
     for(const x of t.anexos){
