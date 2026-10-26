@@ -1278,3 +1278,11 @@ html.manut-on,html.manut-on body{overflow:hidden}
 .fluxo-tela{width:max-content;height:max-content;padding:14.4px}
 .fluxo-tela svg{display:block}
 @media (max-width:860px){ .fluxo-zoom input{width:117px} }
+/* v2.1.27: áreas comuns por tipo */
+.ac-fil{display:flex;align-items:center;gap:7.2px;margin:0 0 9px}
+.ac-fil .inp{width:auto;min-width:162px}
+table.grid td.c-st.na{background:var(--input);color:var(--fg-3,#aaa);font-weight:600}
+.ac-tipo{flex-wrap:wrap;align-self:flex-start}
+.tile.tile-ac{font-size:.68rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 3.6px}
+.tile.tile-ac.larga{text-align:center}
+.bloco-ac .tile.tile-ac{font-weight:700;letter-spacing:0;text-transform:none}

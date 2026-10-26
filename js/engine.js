@@ -84,7 +84,7 @@ function executarAcaoAC(a,acao,col,o){
     if(acao==="liberar"){ sub=2; p.rep_vistoria_qualidade="Pendente 1°"; rep=1; }
     else if(acao==="cancelar"){ sub=1; p.rep_vistoria_qualidade=""; }
   } else if(col==="rep_vistoria_qualidade"){
-    if(acao==="aprovar"){ rep=n; p[col]=`Aprovado ${n}°`; p.rep_vistoria_arq="Pendente 1°"; }
+    if(acao==="aprovar"){ rep=n; p[col]=`Aprovado ${n}°`; if(!areaDeBloco(a)) p.rep_vistoria_arq="Pendente 1°"; }
     else if(acao==="reprovar"){ rep=n; p[col]=`Reprovado ${n}°`; }
     else if(acao==="corrigir"){ rep=n+1; p[col]=`Pendente ${n+1}°`; sub=2; }
   } else if(col==="rep_vistoria_arq"){
@@ -103,7 +103,7 @@ function executarAcaoAC(a,acao,col,o){
   const antes={sub_etapa:old}; Object.keys(p).forEach(k=>antes[k]=a[k]??"");
   Object.assign(a,p);
   let s=sub??old;
-  if(old===2){ if(has(a.rep_vistoria_qualidade,"Aprovado")) s=3; else if(has(a.rep_vistoria_qualidade,"Reprovado")) s=6; }
+  if(old===2){ if(has(a.rep_vistoria_qualidade,"Aprovado")) s=areaDeBloco(a)?7:3; else if(has(a.rep_vistoria_qualidade,"Reprovado")) s=6; }
   if(old===3){ if(has(a.rep_vistoria_arq,"Aprovado")) s=4; else if(has(a.rep_vistoria_arq,"Reprovado")) s=6; }
   if(old===5){ if(has(a.rep_vistoria_sindico,"Aprovado")) s=7; else if(has(a.rep_vistoria_sindico,"Reprovado")) s=6; }
   a.sub_etapa=s;

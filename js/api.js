@@ -18,7 +18,7 @@ const TABS = {
   horarios: { ins: ["id","id_obra","valido_desde","segunda","terca","quarta","quinta","sexta","sabado"], upd: ["valido_desde","segunda","terca","quarta","quinta","sexta","sabado"] },
   horarios_excecoes: { ins: ["id","id_obra","data","fechado","horarios","motivo"], upd: ["data","fechado","horarios","motivo"] },
   unidades: { ins: ["id","id_obra","nivel_1","nivel_2","unidade","modulo","id_cliente","prioridade"], upd: ["nivel_1","nivel_2","unidade","modulo","id_cliente","prioridade"] },
-  areas:    { ins: ["id","id_obra","descricao"], upd: ["descricao"] }
+  areas:    { ins: ["id","id_obra","descricao","tipo","nivel_1","nivel_2"], upd: ["descricao","tipo","nivel_1","nivel_2"] }
 };
 const ORDEM_INS = ["clientes","locais","unidades","areas","horarios","horarios_excecoes"];
 const ORDEM_DEL = ["unidades","areas","horarios_excecoes","horarios","locais","clientes"];

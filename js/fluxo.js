@@ -97,7 +97,10 @@ function fxDefsArea(){
       [1096, 310, "Correções Obra", "corr", true], [1301, 310, "Correções Obra", "corr", true], [1506, 310, "Correções Obra", "corr", true]
     ],
     losangos:[],
-    extra:`<rect x='1909' y='221' width='130' height='44' rx='22' fill='#323130'/><text x='1974' y='247' class='tt' fill='#ffffff'>Concluída</text>`,
+    extra:`<rect x='1909' y='221' width='130' height='44' rx='22' fill='#323130'/><text x='1974' y='247' class='tt' fill='#ffffff'>Concluída</text>
+      <path class='lnd' d='M 1256 236 L 1256 182 Q 1256 175 1263 175 L 1967 175 Q 1974 175 1974 182 L 1974 221' marker-end='url(#a2)'/>
+      <text x='1615' y='169' class='rr' text-anchor='middle' fill='#706F6E'>Hall, Cobertura e Entorno: aprovada a Vistoria Qualidade, a área já fica Concluída</text>
+      ${["1301", "1506", "1707"].map(x => `<text x='${x}' y='213' class='rr' style='font-size:7.5px' fill='#9A9998'>N/A: Hall, Cobertura, Entorno</text>`).join("")}`,
     bolas:[[1049, 243, "ok"], [1256, 243, "ok"], [1461, 243, "ok"], [1666, 243, "av"], [1867, 243, "ok"], [1176, 266, "x"], [1238, 310, "ok"], [1381, 266, "x"], [1443, 310, "ok"], [1586, 266, "x"], [1648, 310, "ok"], [1787, 266, "x"]]
   };
 }

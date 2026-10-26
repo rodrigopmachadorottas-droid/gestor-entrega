@@ -22,6 +22,7 @@ O passo a passo completo para colocar no ar está no documento
 | `js/financeiro.js` | tela Análise Financeira e importação da planilha |
 | `js/frases.js` | tela Definir frases (admin) |
 | `js/gestao.js` | minhas pendências, ações em lote, exportar/backup e tela Obras (admin) |
+| `js/areas.js` | áreas comuns por tipo (geral, hall, cobertura, entorno), nomes automáticos e o lugar delas nos indicadores |
 | `js/fluxo.js` | fluxograma das unidades e das áreas comuns; liberar áreas em lote |
 | `js/manutencao.js` | modo manutenção (aviso com contagem para quem não é admin) |
 | `js/vistoria.js` | vistoria com checklist (Vistoriar, fotos dos itens, correção com foto e Ver checklist) |
@@ -41,6 +42,8 @@ O passo a passo completo para colocar no ar está no documento
 | `supabase/13_atualizacao_2.1.23.sql` | apagar unidade/bloco/área apaga junto o histórico e os laudos; limpa os que já ficaram órfãos — rodar 1x depois da 12 |
 | `supabase/14_atualizacao_2.1.24.sql` | modo manutenção (deixa ler o aviso antes do login) — rodar 1x depois da 13 |
 | `supabase/15_correcao_teste_gas.sql` | correção dos dados do Teste Gás (bug do Power Apps que apagava o teste aprovado) — rodar 1x |
+| `supabase/16_gas_porto_aurora.sql` | Teste Gás do Porto Aurora: "Aprovado 1°" nas unidades antigas sem tarefa de gás — rodar 1x depois da 15 |
+| `supabase/17_atualizacao_2.1.27.sql` | tipo das áreas comuns (hall, cobertura, entorno) e converte os halls de Unidades — rodar 1x depois da 16 |
 | `supabase/11_atualizacao_2.1.14.sql` | campos configuráveis também nas áreas comuns — rodar 1x depois da 10 |
 | `supabase/10_atualizacao_2.1.10.sql` | líder do RC grava a análise financeira — rodar 1x depois da 09 |
 | `supabase/09_atualizacao_2.1.8.sql` | apelidos por pessoa e motivo Inadimplente — rodar 1x depois da 08 |
@@ -74,4 +77,4 @@ Os arquivos `02_dados_*.sql` e os CSV têm dados pessoais de clientes: **não su
 
 ## Publicar uma nova versão
 
-Altere os arquivos, troque `?v=2.1.26` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
+Altere os arquivos, troque `?v=2.1.27` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
