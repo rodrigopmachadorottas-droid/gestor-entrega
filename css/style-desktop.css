@@ -1260,3 +1260,7 @@ html.manut-on,html.manut-on body{overflow:hidden}
 .manut-faixa svg{width:13.5px;height:13.5px;flex:none}
 .manut-faixa .linkbtn{color:var(--primary-l);font-weight:700}
 @media (max-width:860px){ .manut-cont>div{min-width:61.2px} .manut-cont b{font-size:1.6rem} .manut-faixa{top:auto;bottom:calc(10.8px + env(safe-area-inset-bottom,0px));font-size:.75rem} }
+/* v2.1.25: Visão Ações · todas as etapas */
+.acoes>section{min-width:0}
+.acoes .scrollbox{overflow-x:auto}
+.acoes.todas{grid-template-columns:minmax(0,1fr)}

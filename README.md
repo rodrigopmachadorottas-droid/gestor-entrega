@@ -39,6 +39,7 @@ O passo a passo completo para colocar no ar está no documento
 | `supabase/12_atualizacao_2.1.18.sql` | função Visualizador — rodar 1x depois da 11 |
 | `supabase/13_atualizacao_2.1.23.sql` | apagar unidade/bloco/área apaga junto o histórico e os laudos; limpa os que já ficaram órfãos — rodar 1x depois da 12 |
 | `supabase/14_atualizacao_2.1.24.sql` | modo manutenção (deixa ler o aviso antes do login) — rodar 1x depois da 13 |
+| `supabase/15_correcao_teste_gas.sql` | correção dos dados do Teste Gás (bug do Power Apps que apagava o teste aprovado) — rodar 1x |
 | `supabase/11_atualizacao_2.1.14.sql` | campos configuráveis também nas áreas comuns — rodar 1x depois da 10 |
 | `supabase/10_atualizacao_2.1.10.sql` | líder do RC grava a análise financeira — rodar 1x depois da 09 |
 | `supabase/09_atualizacao_2.1.8.sql` | apelidos por pessoa e motivo Inadimplente — rodar 1x depois da 08 |
@@ -72,4 +73,4 @@ Os arquivos `02_dados_*.sql` e os CSV têm dados pessoais de clientes: **não su
 
 ## Publicar uma nova versão
 
-Altere os arquivos, troque `?v=2.1.24` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
+Altere os arquivos, troque `?v=2.1.25` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
