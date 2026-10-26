@@ -22,6 +22,7 @@ O passo a passo completo para colocar no ar está no documento
 | `js/financeiro.js` | tela Análise Financeira e importação da planilha |
 | `js/frases.js` | tela Definir frases (admin) |
 | `js/gestao.js` | minhas pendências, ações em lote, exportar/backup e tela Obras (admin) |
+| `js/manutencao.js` | modo manutenção (aviso com contagem para quem não é admin) |
 | `js/vistoria.js` | vistoria com checklist (Vistoriar, fotos dos itens, correção com foto e Ver checklist) |
 | `js/apelidos.js` | apelidos e frase da tela inicial |
 | `js/indleg.js` | legendas, cores e explicações da Visão Unidades |
@@ -37,6 +38,7 @@ O passo a passo completo para colocar no ar está no documento
 | `supabase/07_atualizacao_2.1.5.sql` | função Líder de área, clientes por obra e exceções de horário — rodar 1x depois da 06 |
 | `supabase/12_atualizacao_2.1.18.sql` | função Visualizador — rodar 1x depois da 11 |
 | `supabase/13_atualizacao_2.1.23.sql` | apagar unidade/bloco/área apaga junto o histórico e os laudos; limpa os que já ficaram órfãos — rodar 1x depois da 12 |
+| `supabase/14_atualizacao_2.1.24.sql` | modo manutenção (deixa ler o aviso antes do login) — rodar 1x depois da 13 |
 | `supabase/11_atualizacao_2.1.14.sql` | campos configuráveis também nas áreas comuns — rodar 1x depois da 10 |
 | `supabase/10_atualizacao_2.1.10.sql` | líder do RC grava a análise financeira — rodar 1x depois da 09 |
 | `supabase/09_atualizacao_2.1.8.sql` | apelidos por pessoa e motivo Inadimplente — rodar 1x depois da 08 |
@@ -70,4 +72,4 @@ Os arquivos `02_dados_*.sql` e os CSV têm dados pessoais de clientes: **não su
 
 ## Publicar uma nova versão
 
-Altere os arquivos, troque `?v=2.1.23` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.
+Altere os arquivos, troque `?v=2.1.24` no `index.html` pela nova versão (força o navegador a baixar de novo) e faça commit/push: a Vercel publica sozinha.

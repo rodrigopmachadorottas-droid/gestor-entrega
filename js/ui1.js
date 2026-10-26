@@ -41,7 +41,7 @@ const IC={
   upload:sv('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.23";
+const VERSAO="v2.1.24";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -151,7 +151,8 @@ function painelAdmin(){
     <button class="btn dark ap-usr" data-act="popupscfg">${IC.edit}Configurar campos das etapas</button>
     <button class="btn dark ap-usr" data-act="frasescfg">${IC.chat||IC.edit}Definir frases</button>
     <button class="btn dark ap-usr" data-act="obrasadm">${IC.building}Obras</button>
-    <button class="btn dark ap-usr" data-act="exportar">${IC.download}Exportar dados</button></div>
+    <button class="btn dark ap-usr" data-act="exportar">${IC.download}Exportar dados</button>
+    <button class="btn dark ap-usr" data-act="manutcfg">${IC.lock}Modo manutenção${manutAtiva()?`<span class="sb-badge">Ligado</span>`:""}</button></div>
     <button class="iconbtn temabtn" data-act="tema" aria-label="${isDark()?"Usar tema claro":"Usar tema escuro"}">${isDark()?io("moon"):io("sun")}</button>
     <span class="spacer"></span>
     ${MODO_DEMO?`<div class="proto"><span class="eyebrow">Modo demonstração</span><span class="small muted">Dados fictícios. As alterações ficam só neste navegador.</span>

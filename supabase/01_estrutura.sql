@@ -1064,3 +1064,11 @@ end $$;
 drop trigger if exists areas_apagar_dependentes on public.areas;
 create trigger areas_apagar_dependentes after delete on public.areas
   for each row execute function public.apagar_dependentes_area();
+
+-- 18) (2.1.24) modo manutenção: aviso legível antes do login
+create or replace function public.status_manutencao() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select coalesce((select valor from config_global where chave = 'manutencao'), '{}'::jsonb)
+$$;
+revoke all on function public.status_manutencao() from public;
+grant execute on function public.status_manutencao() to anon, authenticated;
