@@ -41,7 +41,7 @@ const IC={
   upload:sv('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>'),
   money:sv('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>')
 };
-const VERSAO="v2.1.25";
+const VERSAO="v2.1.26";
 const MOV_IC={ok:["var(--ok)",IC.check],bad:["var(--bad)",IC.x],info:["var(--info)",IC.arrow],primary:["var(--primary)",IC.arrow],neutral:["var(--fg-3)",IC.undo]};
 
 /* ================= ESTADO DE TELA ================= */
@@ -204,7 +204,7 @@ function telaUnidades(){
   const nFil=(f.extras?0:1)+(f.f1?0:1)+(f.f2?0:1)+(f.f3?0:1)+(f.blocos.length?1:0)+(f.minhas?1:0);
   const lote=S.lote.on?loteBarHTML():"";
   const opt=(v,t)=>`<button data-act="vistaund" data-v="${v}" class="dd-opt ${vistaUnd()===v?"on":""}" role="menuitemradio" aria-checked="${vistaUnd()===v}"><span class="dd-ck">${vistaUnd()===v?IC.check:""}</span>${t}</button>`;
-  const acoes=[`<div class="dd-lbl">Visualização</div>`,opt("tabela","Visão tabela"),opt("hier","Visão hierarquia"),
+  const acoes=[`<div class="dd-lbl">Visualização</div>`,opt("tabela","Visão tabela"),opt("hier","Visão hierarquia"),`<hr class="dd-sep"><button data-act="fluxound" class="dd-opt">Fluxograma</button>`,
     podeLote?`<hr class="dd-sep"><button data-act="loteon" class="dd-opt">Ações em lote</button>`:""].filter(Boolean);
   const menu=`<div class="dd-wrap"><button class="iconbtn" data-act="menuacoes" aria-label="Mais ações" aria-expanded="${!!S.menuAcoes}">${IC.dots}</button>${S.menuAcoes?`<div class="dd-scrim" data-act="menuacoes"></div><div class="dropdown" role="menu">${acoes.join("")}</div>`:""}</div>`;
   let body;

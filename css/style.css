@@ -1262,3 +1262,17 @@ html.manut-on,html.manut-on body{overflow:hidden}
 .acoes>section{min-width:0}
 .acoes .scrollbox{overflow-x:auto}
 .acoes.todas{grid-template-columns:minmax(0,1fr)}
+/* v2.1.26: fluxograma */
+.box.fluxo .mbody{padding:0}
+.fluxo-bar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:8px 18px;border-bottom:1px solid var(--border)}
+.fluxo-zoom{display:flex;align-items:center;gap:8px;font-size:.88rem;color:var(--fg-2)}
+.fluxo-zoom svg{width:16px;height:16px}
+.fluxo-zoom input{width:200px;accent-color:var(--primary)}
+.fluxo-zoom b{min-width:42px}
+.fluxo-leg{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--fg-2);flex-wrap:wrap}
+.fluxo-leg i{width:14px;height:10px;border-radius:3px;display:inline-block;margin-left:8px}
+.fluxo-leg i.apagado{background:#E3E3E3;opacity:.4;outline:1px solid #ccc}
+.fluxo-area{overflow:auto;background:#fff}
+.fluxo-tela{width:max-content;height:max-content;padding:16px}
+.fluxo-tela svg{display:block}
+@media (max-width:860px){ .fluxo-zoom input{width:130px} }

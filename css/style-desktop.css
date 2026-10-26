@@ -1264,3 +1264,17 @@ html.manut-on,html.manut-on body{overflow:hidden}
 .acoes>section{min-width:0}
 .acoes .scrollbox{overflow-x:auto}
 .acoes.todas{grid-template-columns:minmax(0,1fr)}
+/* v2.1.26: fluxograma */
+.box.fluxo .mbody{padding:0}
+.fluxo-bar{display:flex;align-items:center;gap:16.2px;flex-wrap:wrap;padding:7.2px 16.2px;border-bottom:1px solid var(--border)}
+.fluxo-zoom{display:flex;align-items:center;gap:7.2px;font-size:.88rem;color:var(--fg-2)}
+.fluxo-zoom svg{width:14.4px;height:14.4px}
+.fluxo-zoom input{width:180px;accent-color:var(--primary)}
+.fluxo-zoom b{min-width:37.8px}
+.fluxo-leg{display:flex;align-items:center;gap:5.4px;font-size:.8rem;color:var(--fg-2);flex-wrap:wrap}
+.fluxo-leg i{width:12.6px;height:9px;border-radius:2.7px;display:inline-block;margin-left:7.2px}
+.fluxo-leg i.apagado{background:#E3E3E3;opacity:.4;outline:1px solid #ccc}
+.fluxo-area{overflow:auto;background:#fff}
+.fluxo-tela{width:max-content;height:max-content;padding:14.4px}
+.fluxo-tela svg{display:block}
+@media (max-width:860px){ .fluxo-zoom input{width:117px} }
