@@ -10,7 +10,7 @@ function limparDependentes(unds,areas){ const U=new Set(unds||[]), A=new Set(are
   if(U.size){ DB.tarefas=DB.tarefas.filter(t=>!U.has(t.id_unidade)); DB.laudos=(DB.laudos||[]).filter(l=>!U.has(l.id_unidade)); }
   if(A.size) DB.tarefas_ac=DB.tarefas_ac.filter(t=>!A.has(t.id_local)); }
 function bloqueadoPorLote(){ if(S.lote.q.length){ toast("Aviso","Você tem ações em lote não salvas","Conclua ou toque em Cancelar antes de sair."); return true; } return false; }
-function entrarObra(id){ S.obraId=id; S.screen=telaInicialObra(); S.nav=false; S.navObras=false; S.popup=null; S.busca=""; S.lote={on:false,q:[]}; S.acLote=null; S.fluxo=null; S.acBloco=""; S.loc={localId:null,n2:null,modal:null,cfgAberta:false}; S.hor=null; S.agd={mes:new Date(new Date().getFullYear(),new Date().getMonth(),1),dia:startOfDay(new Date()),busca:""}; resetFiltros(); }
+function entrarObra(id){ S.obraId=id; S.screen=telaInicialObra(); S.nav=false; S.navObras=false; S.popup=null; S.busca=""; S.lote={on:false,q:[]}; S.acLote=null; S.fluxo=null; S.acFil=[]; S.loc={localId:null,n2:null,modal:null,cfgAberta:false}; S.hor=null; S.agd={mes:new Date(new Date().getFullYear(),new Date().getMonth(),1),dia:startOfDay(new Date()),busca:""}; resetFiltros(); }
 
 document.addEventListener("click",e=>{
   const el=e.target.closest("[data-act]"); if(!el) return;

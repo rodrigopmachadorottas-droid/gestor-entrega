@@ -1284,3 +1284,5 @@ table.grid td.c-st.na{background:var(--input);color:var(--fg-3,#aaa);font-weight
 .tile.tile-ac{font-size:.68rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
 .tile.tile-ac.larga{text-align:center}
 .bloco-ac .tile.tile-ac{font-weight:700;letter-spacing:0;text-transform:none}
+/* v2.1.28 */
+.cf-outros{margin-top:6px}

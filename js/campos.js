@@ -101,7 +101,9 @@ function camposHTML(def, F, ctx){
     const ob = c.obrig ? ` <span class="obr" title="Obrigatório">*</span>` : "", id = `cf-${c.id}`;
     if(c.tipo === "obs") return `<div class="field"><label for="${id}">${esc(c.rotulo)}${ob}</label><textarea class="inp" id="${id}" data-cf="${c.id}" rows="3" placeholder="${c.obrig ? "Obrigatório" : "Opcional"}">${esc(F.v[c.id] || "")}</textarea></div>`;
     if(c.tipo === "data") return campoDataHora(c, F, ob);
-    if(c.tipo === "lista") return `<div class="field"><label for="${id}">${esc(c.rotulo)}${ob}</label><select class="inp" id="${id}" data-cf="${c.id}"><option value="">Selecione</option>${(c.opcoes || []).map(o => `<option ${o === F.v[c.id] ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></div>`;
+    if(c.tipo === "lista"){ const out = c.outros !== false, v = F.v[c.id] || "";
+      return `<div class="field"><label for="${id}">${esc(c.rotulo)}${ob}</label><select class="inp" id="${id}" data-cf="${c.id}"><option value="">Selecione</option>${(c.opcoes || []).map(o => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}${out ? `<option value="__outros" ${v === "__outros" ? "selected" : ""}>Outros</option>` : ""}</select>
+        ${out && v === "__outros" ? `<input class="inp cf-outros" id="${id}-o" data-cf="${c.id}_o" maxlength="80" value="${esc(F.v[c.id + "_o"] || "")}" placeholder="Descreva (obrigatório)" aria-label="Descreva o Outros">` : ""}</div>`; }
     if(c.tipo === "simnao"){ const v = F.sn[c.id] || (c.obrig ? "" : "Não");
       return `<div class="engbox"><div class="row"><b>${esc(c.rotulo)}${ob}</b><span class="spacer"></span><div class="seg"><button class="${v === "Não" ? "on" : ""}" data-act="cfsim" data-id="${c.id}" data-v="Não">Não</button><button class="${v === "Sim" ? "on" : ""}" data-act="cfsim" data-id="${c.id}" data-v="Sim">Sim</button></div></div>
         ${v === "Sim" && c.textoSim ? `<div class="field"><label for="${id}-t">${esc(c.textoSim)}</label><input class="inp" id="${id}-t" data-cft="${c.id}" value="${esc(F.snt[c.id] || "")}"></div>` : ""}
@@ -146,6 +148,7 @@ Object.assign(ACOES_EXTRA, {
 /* ---------- validação e coleta ---------- */
 function validarCampos(def, F, acao){
   for(const c of def){
+    if(c.tipo === "lista" && F.v[c.id] === "__outros" && !String(F.v[c.id + "_o"] || "").trim()) return `Descreva o "Outros": ${c.rotulo}`;
     if(c.tipo === "obs" || c.tipo === "lista" || c.tipo === "data"){ if(c.obrig && !String(F.v[c.id] || "").trim()) return c.tipo === "lista" ? `Selecione: ${c.rotulo}` : `Preencha: ${c.rotulo}`; }
     else if(c.tipo === "simnao"){ if(c.obrig && !F.sn[c.id]) return `Responda: ${c.rotulo}`; }
     else if(c.tipo === "anexo"){ if(c.obrig && !F.anexos.length) return `Anexe o arquivo: ${c.rotulo}`; }
@@ -161,7 +164,7 @@ function coletarCampos(def, F){
     const v = String(F.v[c.id] || "").trim();
     if(c.tipo === "obs"){ if(!obsTxt) obsTxt = v; else if(v) o.campos.push({ r:c.rotulo, v }); }
     else if(c.tipo === "data"){ if(v){ const [y, m, d] = v.split("-"); o.agendamento = `${d}/${m}/${y} ${F.v[c.id + "_h"] || "09:00"}`; } }
-    else if(c.tipo === "lista"){ if(c.principal && !principal) principal = v; else if(v) o.campos.push({ r:c.rotulo, v }); }
+    else if(c.tipo === "lista"){ const v = F.v[c.id] === "__outros" ? `Outros: ${String(F.v[c.id + "_o"] || "").trim()}` : String(F.v[c.id] || "").trim(); if(c.principal && !principal) principal = v; else if(v) o.campos.push({ r:c.rotulo, v }); }
     else if(c.tipo === "simnao"){ const r = F.sn[c.id] || (c.obrig ? "" : "Não"); if(!r) return; const t = (F.snt[c.id] || "").trim();
       o.campos.push({ r:c.rotulo, v:r + (r === "Sim" && t ? ` · ${t}` : "") }); if(r === "Sim" && c.laudo) o.laudo = { engenheiro:t }; }
     else if(c.tipo === "anexo") o.anexos = F.anexos;
@@ -245,7 +248,8 @@ function campoEditor(c, i, n){
   const m = TIPOS_CAMPO[c.tipo] || { nome:c.tipo }, base = `data-ci="${i}"`;
   let extra = "";
   if(c.tipo === "lista") extra = `<div class="field"><label>Opções (uma por linha)</label><textarea class="inp" rows="4" ${base} data-cfe="opcoes">${esc((c.opcoes || []).join("\n"))}</textarea></div>
-    <label class="chk"><input type="checkbox" ${base} data-cfe="principal" ${c.principal ? "checked" : ""}>Usar como texto principal da tarefa (aparece no histórico, como o motivo da reprova)</label>`;
+    <label class="chk"><input type="checkbox" ${base} data-cfe="principal" ${c.principal ? "checked" : ""}>Usar como texto principal da tarefa (aparece no histórico, como o motivo da reprova)</label>
+    <label class="chk"><input type="checkbox" ${base} data-cfe="outros" ${c.outros !== false ? "checked" : ""}>Incluir a opção "Outros" (a pessoa escreve um texto curto)</label>`;
   if(c.tipo === "simnao") extra = `<div class="field"><label>Pedir um texto quando a resposta for Sim (deixe vazio para não pedir)</label><input class="inp" ${base} data-cfe="textoSim" value="${esc(c.textoSim || "")}" placeholder="Ex.: Nome do engenheiro"></div>
     ${S.pcfg.sel.startsWith("rep_vistoria_cliente:") ? `<label class="chk"><input type="checkbox" ${base} data-cfe="laudo" ${c.laudo ? "checked" : ""}>Quando Sim, criar um laudo pendente (tela Laudos)</label>` : ""}
     <span class="small muted">Obrigatória = a pessoa precisa escolher Sim ou Não. Opcional = já vem marcado Não.</span>`;
@@ -314,14 +318,16 @@ const defAtual = () => S.conf ? S.conf.def : S.ag ? S.ag.def : [];
 /* ---------- digitação/troca nos campos ---------- */
 INPUT_EXTRA.push(t => {
   if(t.dataset.hp){ const F = formAtual(); if(F){ const [h, m] = (F.v[t.dataset.cf] || "09:00").split(":"); F.v[t.dataset.cf] = t.dataset.hp === "h" ? `${t.value}:${m}` : `${h}:${t.value}`; return true; } }
-  if(t.dataset.cf != null){ const F = formAtual(); if(F){ F.v[t.dataset.cf] = t.value; return true; } }
+  if(t.dataset.cf != null){ const F = formAtual(); if(F){ const antes = F.v[t.dataset.cf]; F.v[t.dataset.cf] = t.value;
+    if(t.tagName === "SELECT" && (t.value === "__outros" || antes === "__outros")){ if(t.value === "__outros") setTimeout(() => { const o = document.getElementById(t.id + "-o"); if(o) o.focus(); }, 30); return "render"; }
+    return true; } }
   if(t.dataset.cft != null){ const F = formAtual(); if(F){ F.snt[t.dataset.cft] = t.value; return true; } }
   if(S.pcfg && t.hasAttribute("data-lotecfg")){ if(t.type === "checkbox"){ const k = S.pcfg.sel; S.pcfg.rasc[k] = { ...(S.pcfg.rasc[k] || {}), lote:t.checked }; S.pcfg.sujo = true; S.pcfg.sair = false; } return "render"; }
   if(S.pcfg && t.dataset.ci != null){
     const c = camposEdit(S.pcfg.sel)[+t.dataset.ci]; if(!c) return true; const f = t.dataset.cfe;
     if(f === "rotulo" || f === "textoSim" || f === "ajuda") c[f] = t.value;
     else if(f === "opcoes" || f === "itens") c[f] = t.value.split("\n").map(s => s.trim()).filter(Boolean);
-    else if(f === "obrig" || f === "principal" || f === "laudo" || f === "todos" || f === "fotoRep" || f === "fotoCor"){ c[f] = t.checked; if(f === "principal" && t.checked) camposEdit(S.pcfg.sel).forEach(x => { if(x !== c && x.tipo === "lista") x.principal = false; }); }
+    else if(f === "obrig" || f === "principal" || f === "laudo" || f === "todos" || f === "fotoRep" || f === "fotoCor" || f === "outros"){ c[f] = t.checked; if(f === "principal" && t.checked) camposEdit(S.pcfg.sel).forEach(x => { if(x !== c && x.tipo === "lista") x.principal = false; }); }
     else if(t.dataset.cki != null){ c.itens = ckItens(c); c.itens[+t.dataset.cki].t = t.value; }
     else if(t.dataset.ckcat != null){ c.itens = ckItens(c); c.itens[+t.dataset.ckcat].cat = t.value; }
     S.pcfg.sujo = true; S.pcfg.sair = false;

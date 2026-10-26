@@ -141,7 +141,7 @@ function popupFluxo(){
 function abrirFluxo(tipo){ const w = window.innerWidth; S.fluxo = { tipo, zoom:w < 700 ? 60 : tipo === "und" ? 80 : 110 }; S.menuAcoes = false; S.menuAc = false; }
 
 /* ---------- liberar áreas comuns em lote ---------- */
-const acLiberaveis = () => DB.areas.filter(a => a.id_obra === S.obraId && blank(a.rep_vistoria_qualidade));
+const acLiberaveis = () => DB.areas.filter(a => a.id_obra === S.obraId && blank(a.rep_vistoria_qualidade) && passaFiltroArea(a));
 function acLoteBar(){
   const n = S.acLote.q.length, todas = acLiberaveis().length;
   return `<div class="lotebar"><b>Liberar áreas em lote</b><span class="small">Toque nas áreas para marcar. ${n} selecionada(s).</span>${n ? `<button class="linkbtn small" data-act="aclotelimpar">Limpar</button>` : todas ? `<button class="linkbtn small" data-act="aclotetodas">Marcar todas (${todas})</button>` : ""}<span class="spacer"></span>
