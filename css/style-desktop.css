@@ -1288,3 +1288,7 @@ table.grid td.c-st.na{background:var(--input);color:var(--fg-3,#aaa);font-weight
 .bloco-ac .tile.tile-ac{font-weight:700;letter-spacing:0;text-transform:none}
 /* v2.1.28 */
 .cf-outros{margin-top:5.4px}
+/* v2.1.29: filtro de usuários */
+.usr-fns{display:block;color:var(--primary-d);font-weight:600;margin-top:2px}
+:root[data-theme="dark"] .usr-fns{color:var(--primary-l)}
+.usr-filtro{margin:0 0 9px}

@@ -119,9 +119,10 @@ function usrIniciarForm(p){
 }
 function telaUsuarios(){
   const D=S.usrData, U=S.usr;
-  const head=`<header class="topbar"><button class="iconbtn" data-act="usrvoltar" aria-label="Voltar">${IC.back}</button><h1>Usuários</h1><button class="iconbtn" data-act="usrrecarregar" aria-label="Atualizar lista">${io("sync")}</button></header><div class="topspace"></div>`;
+  const D0=S.usrData; const head=`<header class="topbar"><button class="iconbtn" data-act="usrvoltar" aria-label="Voltar">${IC.back}</button><h1>Usuários</h1><button class="iconbtn" data-act="usrrecarregar" aria-label="Atualizar lista">${io("sync")}</button>${D0?filtroBtn(usrNFil()):""}</header><div class="topspace"></div>`;
   if(!D) return head+`<main class="screen"><div class="panel empty"><span class="spin" aria-hidden="true"></span><b>Carregando usuários...</b></div></main>`;
-  const grupos={pendentes:D.perfis.filter(p=>p.status==="pendente"),ativos:D.perfis.filter(p=>p.status==="aprovado"),bloqueados:D.perfis.filter(p=>p.status==="bloqueado")};
+  const P=D.perfis.filter(usrPassaFiltro), filtrando=usrNFil()>0;
+  const grupos={pendentes:P.filter(p=>p.status==="pendente"),ativos:P.filter(p=>p.status==="aprovado"),bloqueados:P.filter(p=>p.status==="bloqueado")};
   const q=U.busca.trim().toLowerCase();
   const lista=grupos[U.aba].filter(p=>!q||(p.nome+" "+p.email).toLowerCase().includes(q))
     .sort((a,b)=>(b.pedido_senha?1:0)-(a.pedido_senha?1:0)||a.nome.localeCompare(b.nome));
@@ -130,11 +131,33 @@ function telaUsuarios(){
     <div class="seg tabs" role="tablist">${[["pendentes","Pendentes"],["ativos","Ativos"],["bloqueados","Bloqueados"]].map(([k,l])=>`<button class="${U.aba===k?"on":""}" role="tab" aria-selected="${U.aba===k}" data-act="usraba" data-v="${k}">${l} <span class="tnum">(${grupos[k].length})</span></button>`).join("")}</div>
     ${pedidosSenha&&U.aba!=="ativos"?`<button class="auth-msg warn" data-act="usraba" data-v="ativos" style="text-align:left;border:0;cursor:pointer">${pedidosSenha} pessoa(s) ativas pediram nova senha. Ver em Ativos.</button>`:""}
     <label class="search in">${IC.search}<input id="usr-busca" data-ubind="busca" value="${esc(U.busca)}" placeholder="Buscar nome ou e-mail" autocomplete="off"></label>
-    <div class="cli-units" id="usr-list" data-keep-scroll>${lista.length?lista.map(p=>`<button class="cli-row ${U.sel===p.id?"on":""}" data-act="usrsel" data-uid="${p.id}">${avatar(p.nome,p.foto)}<span class="usr-txt"><b>${esc(p.nome)}</b><span class="muted small">${esc(p.email)}</span></span><span class="spacer"></span>
+    <div class="cli-units" id="usr-list" data-keep-scroll>${lista.length?lista.map(p=>`<button class="cli-row ${U.sel===p.id?"on":""}" data-act="usrsel" data-uid="${p.id}">${avatar(p.nome,p.foto)}<span class="usr-txt"><b>${esc(p.nome)}</b><span class="muted small">${esc(p.email)}</span>${filtrando?`<span class="small usr-fns">${esc(usrFuncoesTxt(p))}</span>`:""}</span><span class="spacer"></span>
       ${p.pedido_senha?`<span class="pill s-warn">Nova senha</span>`:""}${U.aba==="pendentes"?`<span class="muted small tnum">${fmtData(new Date(p.criado_em))}</span>`:""}</button>`).join("")
       :`<div class="empty"><b>${U.aba==="pendentes"?"Nenhum pedido aguardando":"Ninguém por aqui"}</b><span>${U.aba==="pendentes"?"Quando alguém pedir acesso, aparece nesta lista.":"Mude a aba ou a busca."}</span></div>`}</div></section>`;
-  return head+`<main class="screen"><div class="split cli-split">${left}${usrDetalhe()}</div></main>`;
+  return head+`<main class="screen">${filtrando?`<div class="small muted usr-filtro">Filtrando: ${esc(usrFiltroTxt())} · <button class="linkbtn small" data-act="usrlimpar">Limpar</button></div>`:""}<div class="split cli-split">${left}${usrDetalhe()}</div></main>`+drawerUsuarios();
 }
+/* ----- filtro da tela Usuários: por função e por obra (admin tem acesso a todas as obras) ----- */
+const usrFF=()=>S.usr.ff||(S.usr.ff={funcoes:[],obras:[]});
+const usrNFil=()=>{ const F=usrFF(); return (F.funcoes.length?1:0)+(F.obras.length?1:0); };
+const usrObras=p=>(S.usrData.acessos||[]).filter(a=>a.login===p.login).map(a=>a.obra_id);
+function usrPassaFiltro(p){ const F=usrFF(), fn=p.funcoes||[];
+  if(F.funcoes.length&&!F.funcoes.some(f=>fn.includes(f))) return false;
+  if(F.obras.length&&!fn.includes("admin")&&!F.obras.some(o=>usrObras(p).includes(o))) return false;
+  return true; }
+const usrFuncoesTxt=p=>{ const fn=p.funcoes||[]; return fn.includes("admin")?"Admin · todas as obras":(fn.map(f=>PERM_NOME[f]||f).join(", ")||"Sem função"); };
+const usrFiltroTxt=()=>{ const F=usrFF(); return [F.funcoes.map(f=>PERM_NOME[f]||f).join(" ou "),F.obras.map(o=>(obraById(o)||{}).nome||o).join(" ou ")].filter(Boolean).join(" · "); };
+function drawerUsuarios(){
+  if(!S.drawer||!S.usrData) return "";
+  const F=usrFF(), obras=[...DB.obras].sort((a,b)=>a.ordem-b.ordem);
+  return drawerShell(`<div class="fsec"><b class="flbl">Funções</b>${PERMS.map(f=>`<button class="fck-row" data-act="usrff" data-v="${f}"><span class="fck ${F.funcoes.includes(f)?"on":""}">${IC.check}</span>${esc(PERM_NOME[f]||f)}</button>`).join("")}</div><hr>
+    <div class="fsec"><b class="flbl">Obras</b>${obras.map(o=>`<button class="fck-row" data-act="usrfo" data-id="${o.id}"><span class="fck ${F.obras.includes(o.id)?"on":""}">${IC.check}</span>${esc(o.nome)}${o.ativa===false?` <span class="muted small">(inativa)</span>`:""}</button>`).join("")}
+    <span class="small muted">Administradores aparecem em todas as obras.</span></div>`,"usrlimpar");
+}
+Object.assign(ACOES_EXTRA,{
+  usrff(el){ const F=usrFF(), v=el.dataset.v; F.funcoes=F.funcoes.includes(v)?F.funcoes.filter(x=>x!==v):[...F.funcoes,v]; },
+  usrfo(el){ const F=usrFF(), v=+el.dataset.id; F.obras=F.obras.includes(v)?F.obras.filter(x=>x!==v):[...F.obras,v]; },
+  usrlimpar(){ S.usr.ff={funcoes:[],obras:[]}; }
+});
 function usrDetalhe(){
   const p=usrSel();
   if(!p) return `<section class="panel cli-detail"><div class="empty"><b>Selecione uma pessoa</b><span>Escolha alguém na lista para aprovar o acesso, mudar funções e obras ou redefinir a senha.</span></div></section>`;
@@ -176,7 +199,7 @@ document.addEventListener("click",async e=>{
     async anexo(){ await API.abrirAnexo(el.dataset.path); },
     async usuarios(){ S.adminPanel=false; if(S.screen!=="usuarios") U.voltar=S.obraId?S.screen:"home"; S.screen="usuarios"; S.nav=false; S.navObras=false; S.popup=null; U.sel=null; render();
       try{ await API.carregarUsuarios(); }catch(err){ toast("Erro","Não foi possível carregar os usuários",msgErro(err)); } },
-    usrvoltar(){ S.screen=U.voltar&&S.obraId?U.voltar:"home"; U.sel=null; },
+    usrvoltar(){ S.screen=U.voltar&&S.obraId?U.voltar:"home"; U.sel=null; S.drawer=false; },
     async usrrecarregar(){ try{ await API.carregarUsuarios(); toast("Sucesso","Lista atualizada"); }catch(err){ toast("Erro","Não foi possível atualizar",msgErro(err)); } },
     usraba(){ U.aba=el.dataset.v; U.sel=null; },
     usrsel(){ U.sel=el.dataset.uid; U.ultima=null; usrIniciarForm(usrSel()); },
